@@ -6,7 +6,7 @@ export default function Nav() {
     { href: "/finance",   icon: "💰", label: "การเงิน" },
     { href: "/marketing", icon: "📣", label: "Marketing" },
     { href: "/calendar",  icon: "🗓", label: "ปฏิทิน" },
-    { href: "/files", icon: "📁", label: "ไฟล์งาน" },
+    { href: "/files",     icon: "📁", label: "ไฟล์งาน" },
   ];
 
   return (
