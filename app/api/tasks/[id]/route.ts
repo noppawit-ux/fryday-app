@@ -3,9 +3,10 @@ import { notion, mapPageToTask } from "@/lib/notion";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const { status, done, priority, category, deadline, note } = body;
 
@@ -23,11 +24,7 @@ export async function PATCH(
       return NextResponse.json({ error: "ไม่มีข้อมูลให้อัปเดต" }, { status: 400 });
     }
 
-    const page = await notion.pages.update({
-      page_id: params.id,
-      properties,
-    });
-
+    const page = await notion.pages.update({ page_id: id, properties });
     const updatedTask = mapPageToTask(page);
     return NextResponse.json({ task: updatedTask }, { status: 200 });
   } catch (err) {
@@ -38,13 +35,11 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await notion.pages.update({
-      page_id: params.id,
-      archived: true,
-    });
+    const { id } = await params;
+    await notion.pages.update({ page_id: id, archived: true });
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error("[DELETE /api/tasks/:id]", err);
