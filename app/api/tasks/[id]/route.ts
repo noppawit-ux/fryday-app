@@ -1,0 +1,53 @@
+import { NextRequest, NextResponse } from "next/server";
+import { notion, mapPageToTask } from "@/lib/notion";
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await req.json();
+    const { status, done, priority, category, deadline, note } = body;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const properties: Record<string, any> = {};
+
+    if (status !== undefined)   properties["สถานะ"]       = { select:    { name: status } };
+    if (done !== undefined)     properties["เสร็จแล้ว?"]  = { checkbox:  done };
+    if (priority !== undefined) properties["ความสำคัญ"]   = { select:    { name: priority } };
+    if (category !== undefined) properties["หมวดหมู่"]    = { select:    { name: category } };
+    if (deadline !== undefined) properties["Deadline"]     = deadline ? { date: { start: deadline } } : { date: null };
+    if (note !== undefined)     properties["หมายเหตุ"]     = { rich_text: note ? [{ text: { content: note } }] : [] };
+
+    if (Object.keys(properties).length === 0) {
+      return NextResponse.json({ error: "ไม่มีข้อมูลให้อัปเดต" }, { status: 400 });
+    }
+
+    const page = await notion.pages.update({
+      page_id: params.id,
+      properties,
+    });
+
+    const updatedTask = mapPageToTask(page);
+    return NextResponse.json({ task: updatedTask }, { status: 200 });
+  } catch (err) {
+    console.error("[PATCH /api/tasks/:id]", err);
+    return NextResponse.json({ error: "อัปเดตไม่สำเร็จ" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await notion.pages.update({
+      page_id: params.id,
+      archived: true,
+    });
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (err) {
+    console.error("[DELETE /api/tasks/:id]", err);
+    return NextResponse.json({ error: "ลบงานไม่สำเร็จ" }, { status: 500 });
+  }
+}
