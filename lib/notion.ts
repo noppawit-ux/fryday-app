@@ -1,10 +1,9 @@
 import { Client } from "@notionhq/client";
 
 export const notion = new Client({
-  auth: "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",
+  auth: process.env.NOTION_TOKEN,
 });
-
-export const TASKS_DB_ID = "36248e396be880c698f9e032de603ef2";
+export const TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID!;
 
 export type TaskStatus = "รอดำเนินการ" | "กำลังทำ" | "เสร็จแล้ว" | "ติดปัญหา";
 export type TaskPriority = "ด่วนมาก" | "ปานกลาง" | "ไม่เร่งด่วน";

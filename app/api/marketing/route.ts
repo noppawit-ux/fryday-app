@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { notion } from "@/lib/notion";
 
-const MARKETING_DB_ID = "36248e396be880b48c7ececf8c45bb79";
+const MARKETING_DB_ID = process.env.NOTION_MARKETING_DB_ID!;
 
 export interface FrydayCampaign {
   id: string;

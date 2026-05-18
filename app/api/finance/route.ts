@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { notion } from "@/lib/notion";
 
-const FINANCE_DB_ID = "36248e396be88072a533f3b29a33fbd1";
+const FINANCE_DB_ID = process.env.NOTION_FINANCE_DB_ID!;
 
 export type TransactionType = "รายรับ" | "รายจ่าย";
 export type PaymentChannel = "เงินสด" | "โอนธนาคาร" | "QR Code" | "บัตรเครดิต";
