@@ -84,7 +84,7 @@ export default function HomePage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
           {[
             { href: "/tasks",     icon: "📋", label: "จัดการงาน",  bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
-            { href: "/finance",   icon: "💰", label: "ดูการเงิน",  bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" },
+            { href: "https://fryday-accounting-dashboard.vercel.app", icon: "💰", label: "ดูการเงิน", bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" },
             { href: "/marketing", icon: "📣", label: "Marketing",   bg: "#EEEDFE", color: "#3C3489", border: "#CECBF6" },
             { href: "/calendar",  icon: "🗓", label: "ปฏิทิน",     bg: "#FAEEDA", color: "#854F0B", border: "#FAC775" },
             { href: "/files",     icon: "📁", label: "ไฟล์งาน",    bg: "#F1EFE8", color: "#5F5E5A", border: "#D3D1C7" },
