@@ -133,7 +133,7 @@ export default function ChatPage() {
       const month = new Date().toISOString().slice(0, 7);
       const [tRes, fRes, mRes] = await Promise.all([
         fetch("/api/tasks?done=false"),
-        fetch(`/api/finance?month=${month}`),
+        fetch(`/api/accounting?month=${month}`),
         fetch("/api/marketing"),
       ]);
       const tasks     = tRes.ok ? (await tRes.json()).tasks ?? [] : [];

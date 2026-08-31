@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { notion } from "@/lib/notion";
 
+
 const FINANCE_DB_ID = process.env.NOTION_FINANCE_DB_ID!;
+const SUPABASE_URL = "https://razqsirgbwixjrbihaou.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;
 
 export type TransactionType = "รายรับ" | "รายจ่าย";
 export type PaymentChannel = "เงินสด" | "โอนธนาคาร" | "QR Code" | "บัตรเครดิต";

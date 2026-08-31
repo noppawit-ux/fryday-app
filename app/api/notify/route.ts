@@ -6,7 +6,7 @@ const LINE_TOKEN   = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
 const TARGET_IDS   = (process.env.LINE_NOTIFY_TARGET_ID ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 const TASKS_DB_ID  = process.env.NOTION_TASKS_DB_ID!;
 const EVENTS_DB_ID = process.env.NOTION_EVENTS_DB_ID ?? "";
-const ACCOUNTING_URL = process.env.DASHBOARD_REVIEW_URL ?? "https://fryday-accounting-dashboard.vercel.app";
+const SUPABASE_URL = "https://razqsirgbwixjrbihaou.supabase.co";
 
 // ---- ส่ง Line Message ----
 async function sendLineMessage(userId: string, messages: object[]) {
