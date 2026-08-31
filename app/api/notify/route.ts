@@ -243,7 +243,7 @@ function buildFlexMessage(
     contents: [
       {
         type: "button", style: "primary", color: "#C0200A", height: "sm",
-        action: { type: "uri", label: "เปิด Fryday", uri: "https://fryday-app-oawz.vercel.app" },
+        action: { type: "uri", label: "เปิด Fryday", uri: "https://fryday-app-oawz-jiq4gx0tp-noppawit-uxs-projects.vercel.app" },
       },
       {
         type: "button", style: "secondary", height: "sm",
