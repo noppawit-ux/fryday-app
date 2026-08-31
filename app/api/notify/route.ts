@@ -10,7 +10,7 @@ const ACCOUNTING_URL = process.env.DASHBOARD_REVIEW_URL ?? "https://fryday-accou
 
 // ---- ส่ง Line Message ----
 async function sendLineMessage(userId: string, messages: object[]) {
-  await fetch("https://api.line.me/v2/bot/message/push", {
+  const res = await fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -18,6 +18,9 @@ async function sendLineMessage(userId: string, messages: object[]) {
     },
     body: JSON.stringify({ to: userId, messages }),
   });
+  const data = await res.json();
+  console.log(`[LINE] to=${userId} status=${res.status}`, JSON.stringify(data));
+  return data;
 }
 
 // ---- ดึง Tasks ที่ยังค้างอยู่และ Deadline วันนี้/เกินกำหนด ----
