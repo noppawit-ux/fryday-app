@@ -164,7 +164,7 @@ function buildFlexMessage(
       ]},
       { type: "separator" },
       { type: "box", layout: "vertical", flex: 1, contents: [
-        { type: "text", text: String(taskData.overdue.length), size: "xxl", weight: "bold", color: taskData.overdue.length > 0 ? "#C0200A" : "#1D9E75", align: "center" },
+        { type: "text", text: String(taskData.overdue.length), size: "xxl", weight: "bold", color: "#1D9E75", align: "center" },
         { type: "text", text: "เกิน Deadline", size: "xs", color: "#666666", align: "center" },
       ]},
       { type: "separator" },
@@ -226,7 +226,7 @@ function buildFlexMessage(
         ]},
         { type: "box", layout: "horizontal", margin: "xs", contents: [
           { type: "text", text: "กำไรสุทธิ", size: "sm", color: "#555555", flex: 1 },
-          { type: "text", text: `฿${new Intl.NumberFormat("th-TH").format(accounting.netProfit ?? 0)}`, size: "sm", color: (accounting.netProfit ?? 0) >= 0 ? "#27500A" : "#C0200A", weight: "bold" },
+          { type: "text", text: `฿${new Intl.NumberFormat("th-TH").format(accounting.netProfit ?? 0)}`, size: "sm", color: "#27500A", weight: "bold" },
         ]},
         { type: "box", layout: "horizontal", margin: "xs", contents: [
           { type: "text", text: "ส่วนแบ่ง/คน", size: "sm", color: "#555555", flex: 1 },
