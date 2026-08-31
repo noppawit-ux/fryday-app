@@ -137,7 +137,7 @@ function buildFlexMessage(
           type: "box", layout: "horizontal", margin: "sm",
           contents: [
             { type: "text", text: "🔴", size: "sm", flex: 0 },
-            { type: "text", text: `${t.name}`, size: "sm", color: "#333", flex: 1, margin: "sm", wrap: true },
+            { type: "text", text: `${t.name}`, size: "sm", color: "#333333", flex: 1, margin: "sm", wrap: true },
             { type: "text", text: "เกิน!", size: "xs", color: "#C0200A", flex: 0 },
           ],
         }))),
@@ -145,7 +145,7 @@ function buildFlexMessage(
           type: "box", layout: "horizontal", margin: "sm",
           contents: [
             { type: "text", text: "🟡", size: "sm", flex: 0 },
-            { type: "text", text: `${t.name}`, size: "sm", color: "#333", flex: 1, margin: "sm", wrap: true },
+            { type: "text", text: `${t.name}`, size: "sm", color: "#333333", flex: 1, margin: "sm", wrap: true },
             { type: "text", text: "วันนี้", size: "xs", color: "#854F0B", flex: 0 },
           ],
         }))),
@@ -160,17 +160,17 @@ function buildFlexMessage(
     contents: [
       { type: "box", layout: "vertical", flex: 1, contents: [
         { type: "text", text: String(taskData.tasks.length), size: "xxl", weight: "bold", color: "#C0200A", align: "center" },
-        { type: "text", text: "งานคงค้าง", size: "xs", color: "#666", align: "center" },
+        { type: "text", text: "งานคงค้าง", size: "xs", color: "#666666", align: "center" },
       ]},
       { type: "separator" },
       { type: "box", layout: "vertical", flex: 1, contents: [
         { type: "text", text: String(taskData.overdue.length), size: "xxl", weight: "bold", color: taskData.overdue.length > 0 ? "#C0200A" : "#1D9E75", align: "center" },
-        { type: "text", text: "เกิน Deadline", size: "xs", color: "#666", align: "center" },
+        { type: "text", text: "เกิน Deadline", size: "xs", color: "#666666", align: "center" },
       ]},
       { type: "separator" },
       { type: "box", layout: "vertical", flex: 1, contents: [
         { type: "text", text: String(taskData.dueToday.length), size: "xxl", weight: "bold", color: "#854F0B", align: "center" },
-        { type: "text", text: "ครบวันนี้", size: "xs", color: "#666", align: "center" },
+        { type: "text", text: "ครบวันนี้", size: "xs", color: "#666666", align: "center" },
       ]},
     ],
   });
@@ -187,7 +187,7 @@ function buildFlexMessage(
           type: "box", layout: "horizontal", margin: "sm",
           contents: [
             { type: "text", text: "📌", size: "sm", flex: 0 },
-            { type: "text", text: e.name, size: "sm", color: "#333", flex: 1, margin: "sm", wrap: true },
+            { type: "text", text: e.name, size: "sm", color: "#333333", flex: 1, margin: "sm", wrap: true },
           ],
         })),
       ],
@@ -205,7 +205,7 @@ function buildFlexMessage(
           type: "box", layout: "horizontal", margin: "sm",
           contents: [
             { type: "text", text: "•", size: "sm", flex: 0, color: "#534AB7" },
-            { type: "text", text: e.name, size: "sm", color: "#555", flex: 1, margin: "sm", wrap: true },
+            { type: "text", text: e.name, size: "sm", color: "#555555", flex: 1, margin: "sm", wrap: true },
           ],
         })),
       ],
@@ -221,15 +221,15 @@ function buildFlexMessage(
       contents: [
         { type: "text", text: "💰 ยอดขายเดือนนี้", weight: "bold", color: "#27500A", size: "sm" },
         { type: "box", layout: "horizontal", margin: "sm", contents: [
-          { type: "text", text: "รายรับ", size: "sm", color: "#555", flex: 1 },
+          { type: "text", text: "รายรับ", size: "sm", color: "#555555", flex: 1 },
           { type: "text", text: `฿${new Intl.NumberFormat("th-TH").format(accounting.totalRevenue ?? 0)}`, size: "sm", color: "#27500A", weight: "bold" },
         ]},
         { type: "box", layout: "horizontal", margin: "xs", contents: [
-          { type: "text", text: "กำไรสุทธิ", size: "sm", color: "#555", flex: 1 },
+          { type: "text", text: "กำไรสุทธิ", size: "sm", color: "#555555", flex: 1 },
           { type: "text", text: `฿${new Intl.NumberFormat("th-TH").format(accounting.netProfit ?? 0)}`, size: "sm", color: (accounting.netProfit ?? 0) >= 0 ? "#27500A" : "#C0200A", weight: "bold" },
         ]},
         { type: "box", layout: "horizontal", margin: "xs", contents: [
-          { type: "text", text: "ส่วนแบ่ง/คน", size: "sm", color: "#555", flex: 1 },
+          { type: "text", text: "ส่วนแบ่ง/คน", size: "sm", color: "#555555", flex: 1 },
           { type: "text", text: `฿${new Intl.NumberFormat("th-TH").format((accounting.netProfit ?? 0) / 3)}`, size: "sm", color: "#185FA5", weight: "bold" },
         ]},
       ],
