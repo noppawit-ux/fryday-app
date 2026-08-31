@@ -12,6 +12,7 @@ export default function Nav() {
     { href: "/marketing", icon: "📣", label: "Marketing" },
     { href: "/calendar",  icon: "🗓", label: "ปฏิทิน" },
     { href: "/files",     icon: "📁", label: "ไฟล์งาน" },
+        { href: "/chat", icon: "🤖", label: "AI Chat" },
   ];
 
   return (
