@@ -119,7 +119,7 @@ function buildFlexMessage(
       backgroundColor: "#C0200A", paddingAll: "16px",
       contents: [
         { type: "text", text: "🍗 Fryday Daily Brief", color: "#FFFFFF", size: "lg", weight: "bold" },
-        { type: "text", text: thDate, color: "rgba(255,255,255,0.8)", size: "sm", margin: "sm" },
+        { type: "text", text: thDate, color: "#FFCCCC", size: "sm", margin: "sm" },
       ],
     },
     // Divider
