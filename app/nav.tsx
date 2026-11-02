@@ -8,6 +8,7 @@ export default function Nav() {
   const links = [
     { href: "/",          icon: "🏠", label: "หน้าหลัก" },
     { href: "/tasks",     icon: "📋", label: "งาน" },
+    { href: "/roadmap",   icon: "🧭", label: "Roadmap" },
     { href: "https://fryday-accounting-dashboard.vercel.app", icon: "💰", label: "การเงิน" },
     { href: "/marketing", icon: "📣", label: "Marketing" },
     { href: "/calendar",  icon: "🗓", label: "ปฏิทิน" },
