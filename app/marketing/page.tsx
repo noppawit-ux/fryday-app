@@ -192,7 +192,10 @@ export default function MarketingPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <h1 style={{ fontSize: 22, fontWeight: 500, margin: 0, color: "#1a1a18" }}>📣 Fryday — Marketing</h1>
-        <button onClick={fetchData} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer", marginLeft: "auto" }}>
+        <a href="/marketing/studio" style={{ fontSize: 12, padding: "6px 14px", borderRadius: 99, border: "0.5px solid #C0200A", background: "#C0200A", color: "#fff", textDecoration: "none", marginLeft: "auto" }}>
+          🎬 Studio ทำคลิป
+        </a>
+        <button onClick={fetchData} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>
           🔄 รีเฟรช
         </button>
       </div>
