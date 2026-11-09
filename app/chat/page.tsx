@@ -224,9 +224,9 @@ export default function ChatPage() {
       });
 
       const result = await response.json();
-      const reply  = result.content?.find(
-        (c: { type: string }) => c.type === "text"
-      )?.text ?? "ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ";
+      const reply  = !response.ok
+        ? `❌ ${[result.error, result.detail].filter(Boolean).join(" · ") || "AI ตอบไม่ได้"}`
+        : result.content?.find((c: { type: string }) => c.type === "text")?.text ?? "ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ";
 
       setMessages((prev) =>
         prev.map((m) =>
