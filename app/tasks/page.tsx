@@ -85,6 +85,62 @@ function Column({ status, tasks, onToggleDone, onChangeStatus }: {
   );
 }
 
+const CATEGORIES = ["การตลาด", "ครัว", "การเงิน", "ทั่วไป", "HR"];
+const PRIORITIES = ["ปานกลาง", "ด่วนมาก", "ไม่เร่งด่วน"];
+
+function AddTaskForm({ onAdded }: { onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
+  const [f, setF] = useState({ name: "", category: "การตลาด", priority: "ปานกลาง", deadline: "", note: "" });
+  const inp: React.CSSProperties = { width: "100%", fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #d3d1c7", background: "#fff", color: "#1a1a18", boxSizing: "border-box", font: "inherit" };
+  const lab: React.CSSProperties = { display: "block", margin: "0 0 4px", fontSize: 12, color: "#73726c" };
+
+  const submit = async () => {
+    if (!f.name.trim()) { setErr("กรุณาใส่ชื่องาน"); return; }
+    setBusy(true); setErr(""); setOk("");
+    const res = await fetch("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: f.name, category: f.category, priority: f.priority, deadline: f.deadline || undefined, note: f.note || undefined, status: "รอดำเนินการ" }) }).catch(() => null);
+    const data = res ? await res.json().catch(() => ({})) : {};
+    setBusy(false);
+    if (!res?.ok) { setErr([data.error ?? "เชื่อมต่อไม่ได้", data.detail].filter(Boolean).join(" · ")); return; }
+    setOk(`เพิ่มงาน “${f.name.trim()}” แล้ว`);
+    setF((x) => ({ ...x, name: "", note: "", deadline: "" }));
+    onAdded();
+  };
+
+  if (!open) return (
+    <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <button onClick={() => { setOpen(true); setOk(""); }} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 99, border: "none", background: "#C0200A", color: "#fff", cursor: "pointer", fontWeight: 600 }}>+ เพิ่มงาน</button>
+      {ok && <span role="status" style={{ fontSize: 13, color: "#27500A" }}>{ok}</span>}
+    </div>
+  );
+
+  return (
+    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 18px", marginBottom: 16 }}>
+      <p style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 500 }}>เพิ่มงานใหม่</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10 }}>
+        <label style={{ gridColumn: "1/-1" }}><span style={lab}>ชื่องาน *</span>
+          <input style={inp} autoFocus placeholder="เช่น ถ่ายคลิปพิกัดร้าน" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && submit()} /></label>
+        <label><span style={lab}>หมวดหมู่</span>
+          <select style={inp} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></label>
+        <label><span style={lab}>ความสำคัญ</span>
+          <select style={inp} value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })}>{PRIORITIES.map((c) => <option key={c}>{c}</option>)}</select></label>
+        <label><span style={lab}>กำหนดเสร็จ</span>
+          <input style={inp} type="date" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} /></label>
+        <label style={{ gridColumn: "1/-1" }}><span style={lab}>หมายเหตุ</span>
+          <textarea style={{ ...inp, minHeight: 60 }} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
+      </div>
+      {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D" }}>❌ {err}</p>}
+      {ok && <p role="status" style={{ margin: "10px 0 0", fontSize: 13, color: "#27500A" }}>✓ {ok} กรอกต่อเพื่อเพิ่มงานถัดไปได้</p>}
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button onClick={submit} disabled={busy} style={{ fontSize: 13, padding: "8px 20px", borderRadius: 99, border: "none", background: "#C0200A", color: "#fff", cursor: "pointer", fontWeight: 600, opacity: busy ? 0.6 : 1 }}>{busy ? "กำลังบันทึก…" : "บันทึกงาน"}</button>
+        <button onClick={() => setOpen(false)} style={{ fontSize: 13, padding: "8px 16px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>ปิด</button>
+      </div>
+    </div>
+  );
+}
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState<FrydayTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +193,8 @@ export default function TasksPage() {
           <button onClick={fetchTasks} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 99, border: "0.5px solid #e5e3db", background: "transparent", color: "#73726c", cursor: "pointer" }}>🔄 รีเฟรช</button>
         </div>
       </div>
+
+      <AddTaskForm onAdded={() => { setFilter("all"); fetchTasks(); }} />
 
       {loading && <p style={{ color: "#73726c", fontSize: 14 }}>กำลังโหลด...</p>}
       {error   && <p style={{ color: "#A32D2D", fontSize: 14 }}>❌ {error}</p>}

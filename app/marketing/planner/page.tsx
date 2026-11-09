@@ -113,6 +113,7 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
   const [open, setOpen] = useState<Campaign | null>(null);
   const [notes, setNotes] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [qerr, setQerr] = useState("");
   const [quick, setQuick] = useState({ title: "", format: "พิกัดร้าน" });
   const [perWeek, setPerWeek] = useState<number[]>([2, 5, 0]);
   const [plan, setPlan] = useState<{ id: string; title: string; date: string }[] | null>(null);
@@ -139,9 +140,11 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
   };
   const addQuick = async () => {
     if (!quick.title.trim()) return;
-    setBusy(true);
-    await api("/api/marketing", { method: "POST", body: JSON.stringify({ title: quick.title.trim(), contentType: typeOf(quick.format), status: "ไอเดีย", postDate: sel, notes: `รูปแบบ: ${quick.format}` }) });
-    setQuick((q) => ({ ...q, title: "" })); setBusy(false); await reload();
+    setBusy(true); setQerr("");
+    const r = await api("/api/marketing", { method: "POST", body: JSON.stringify({ title: quick.title.trim(), contentType: typeOf(quick.format), status: "ไอเดีย", postDate: sel, notes: `รูปแบบ: ${quick.format}` }) });
+    setBusy(false);
+    if (!r.ok) { setQerr([r.data.error ?? "เพิ่มไม่สำเร็จ", (r.data as { detail?: string }).detail].filter(Boolean).join(" · ")); return; }
+    setQuick((q) => ({ ...q, title: "" })); await reload();
   };
 
   const suggest = () => {
@@ -198,6 +201,7 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
             <button style={btnP} disabled={busy} onClick={addQuick}>+</button>
           </div>
           <select style={{ ...input, marginTop: 6 }} aria-label="รูปแบบ" value={quick.format} onChange={(e) => setQuick((q) => ({ ...q, format: e.target.value }))}>{FORMATS.map((f) => <option key={f}>{f}</option>)}</select>
+          {qerr && <p role="alert" style={{ margin: "6px 0 0", fontSize: 12, color: RED }}>❌ {qerr}</p>}
         </section>
 
         {open && (
@@ -213,6 +217,7 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
             <label style={{ ...lab, marginTop: 8 }}>สคริปต์/โน้ต</label>
             <pre style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 12, maxHeight: 220, overflow: "auto", background: "#faf9f5", borderRadius: 8, padding: 8, fontFamily: "inherit" }}>{notes === null ? "กำลังโหลด…" : notes || "ยังไม่มีสคริปต์"}</pre>
             <button style={{ ...btn, marginTop: 8 }} onClick={() => toScript(open)}>✍️ ออกแบบสคริปต์ให้โพสต์นี้</button>
+            <TaskMaker key={open.id + (open.postDate ?? "")} c={open} />
           </section>
         )}
 
@@ -519,6 +524,55 @@ function Insights({ items, toIdeas }: { items: Campaign[]; toIdeas: (theme: stri
       {(sales || trends) && (
         <div><button style={btnP} onClick={toTheme}>✨ ส่งไปคิดไอเดีย</button> <span style={{ fontSize: 12, color: MUTED }}>นำสรุปข้อมูลข้างบนไปเป็นโจทย์ในแท็บคิดไอเดีย</span></div>
       )}
+    </div>
+  );
+}
+
+/* ---------------- สร้างงานย่อยในหน้า Tasks จากโพสต์ ---------------- */
+const STEPS = [
+  { key: "prep", label: "เตรียมของ + วางช็อต", off: -3 },
+  { key: "shoot", label: "ถ่ายฟุตเทจ", off: -2 },
+  { key: "edit", label: "ตัดต่อ + ใส่ข้อความ/แคปชัน", off: -1 },
+  { key: "post", label: "โพสต์ + ตอบคอมเมนต์", off: 0 },
+];
+
+function TaskMaker({ c }: { c: Campaign }) {
+  const base = c.postDate?.slice(0, 10) ?? "";
+  const [on, setOn] = useState<string[]>(STEPS.map((s) => s.key));
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const t0 = todayStr();
+  const dateFor = (off: number) => { const d = addDays(base, off); return d < t0 ? t0 : d; };
+
+  if (!base) return <p style={{ margin: "12px 0 0", fontSize: 12, color: MUTED }}>ตั้งวันที่โพสต์ก่อน แล้วจะสร้างงานเตรียม ถ่าย ตัดต่อ โพสต์ ลงหน้างานให้ได้</p>;
+
+  const create = async () => {
+    setBusy(true); setErr(""); setMsg("");
+    const chosen = STEPS.filter((s) => on.includes(s.key));
+    let ok = 0, last = "";
+    for (const s of chosen) {
+      const r = await api("/api/tasks", { method: "POST", body: JSON.stringify({ name: `${s.label}: ${c.title}`.slice(0, 150), category: "การตลาด", priority: "ปานกลาง", deadline: dateFor(s.off), note: `จากแผนคอนเทนต์ · กำหนดโพสต์ ${base}` }) });
+      if (r.ok) ok++; else last = [r.data.error, (r.data as { detail?: string }).detail].filter(Boolean).join(" · ");
+    }
+    setBusy(false);
+    if (ok) { setMsg(`สร้างแล้ว ${ok} งาน`); setDone(true); }
+    if (ok < chosen.length) setErr(`สร้างไม่สำเร็จ ${chosen.length - ok} งาน ${last}`);
+  };
+
+  return (
+    <div style={{ marginTop: 12, borderTop: `1px solid ${LINE}`, paddingTop: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>สร้างงานในหน้างาน</div>
+      {STEPS.map((s) => (
+        <label key={s.key} style={{ display: "flex", gap: 6, fontSize: 13, alignItems: "center", marginBottom: 3 }}>
+          <input type="checkbox" disabled={done} checked={on.includes(s.key)} onChange={() => setOn((a) => (a.includes(s.key) ? a.filter((x) => x !== s.key) : [...a, s.key]))} />
+          <span style={{ flex: 1 }}>{s.label}</span><span style={{ color: MUTED, fontSize: 11 }}>{thDate(dateFor(s.off))}</span>
+        </label>
+      ))}
+      <button style={{ ...btnP, marginTop: 8, opacity: busy || done || !on.length ? 0.6 : 1 }} disabled={busy || done || !on.length} onClick={create}>{busy ? "กำลังสร้าง…" : done ? "สร้างแล้ว" : "สร้างงาน"}</button>
+      {msg && <p role="status" style={{ margin: "6px 0 0", fontSize: 12, color: "#27500A" }}>{msg} · <a href="/tasks" style={{ color: "#185FA5" }}>ดูในหน้างาน</a></p>}
+      {err && <p role="alert" style={{ margin: "6px 0 0", fontSize: 12, color: RED }}>❌ {err}</p>}
     </div>
   );
 }

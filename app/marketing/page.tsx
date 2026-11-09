@@ -28,7 +28,7 @@ interface Summary {
 
 const STATUS_LIST = ["ไอเดีย", "กำลังสร้าง", "รออนุมัติ", "โพสต์แล้ว", "วัดผล"];
 const CONTENT_TYPES = ["รูปภาพ", "Reel/Video", "โปรโมชัน", "Story", "Giveaway"];
-const CHANNELS = ["Facebook", "Instagram", "TikTok", "Line OA", "Shopee Food", "GrabFood"];
+const CHANNELS = ["Facebook", "Instagram", "TikTok", "YouTube Shorts", "Line OA", "Shopee Food", "GrabFood"];
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
   ไอเดีย:      { bg: "#F1EFE8", color: "#5F5E5A", border: "#D3D1C7" },
@@ -75,24 +75,28 @@ function AddCampaignForm({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen]       = useState(false);
   const [loading, setLoading] = useState(false);
   const [selChannels, setSelChannels] = useState<string[]>([]);
+  const [err, setErr] = useState("");
   const [form, setForm] = useState({
-    title: "", contentType: "รูปภาพ", status: "ไอเดีย", postDate: "", budget: "", link: "",
+    title: "", contentType: "Reel/Video", status: "ไอเดีย", postDate: "", budget: "", link: "", notes: "",
   });
 
   const toggleChannel = (ch: string) =>
     setSelChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]);
 
   const handleSubmit = async () => {
-    if (!form.title) return;
-    setLoading(true);
-    await fetch("/api/marketing", {
+    if (!form.title.trim()) { setErr("กรุณาใส่ชื่อแคมเปญหรือโพสต์"); return; }
+    setLoading(true); setErr("");
+    const res = await fetch("/api/marketing", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, channels: selChannels, budget: form.budget ? parseFloat(form.budget) : 0 }),
-    });
+      body: JSON.stringify({ ...form, title: form.title.trim(), channels: selChannels, budget: form.budget ? parseFloat(form.budget) : 0 }),
+    }).catch(() => null);
+    const data = res ? await res.json().catch(() => ({})) : {};
     setLoading(false);
+    // ไม่ปิดฟอร์มถ้าบันทึกไม่สำเร็จ เพื่อให้เห็นสาเหตุและไม่ต้องกรอกใหม่
+    if (!res?.ok) { setErr([data.error ?? "เชื่อมต่อไม่ได้", data.detail].filter(Boolean).join(" · ")); return; }
     setOpen(false);
-    setForm({ title: "", contentType: "รูปภาพ", status: "ไอเดีย", postDate: "", budget: "", link: "" });
+    setForm({ title: "", contentType: "Reel/Video", status: "ไอเดีย", postDate: "", budget: "", link: "", notes: "" });
     setSelChannels([]);
     onAdded();
   };
@@ -147,10 +151,15 @@ function AddCampaignForm({ onAdded }: { onAdded: () => void }) {
           </div>
         </div>
         <div style={{ gridColumn: "1/-1" }}>
+          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>รายละเอียด / สคริปต์ (เก็บไว้ในหน้าแคมเปญ)</p>
+          <textarea style={{ ...inp, minHeight: 64, font: "inherit" }} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+        </div>
+        <div style={{ gridColumn: "1/-1" }}>
           <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>Link โพสต์</p>
           <input style={inp} placeholder="https://..." value={form.link} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))} />
         </div>
       </div>
+      {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D" }}>❌ {err}</p>}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button onClick={handleSubmit} disabled={loading} style={{ fontSize: 13, padding: "8px 20px", borderRadius: 99, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontWeight: 500 }}>
           {loading ? "กำลังบันทึก..." : "บันทึก"}
@@ -192,15 +201,25 @@ export default function MarketingPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <h1 style={{ fontSize: 22, fontWeight: 500, margin: 0, color: "#1a1a18" }}>📣 Fryday — Marketing</h1>
-        <a href="/marketing/planner" style={{ fontSize: 12, padding: "6px 14px", borderRadius: 99, border: "0.5px solid #C0200A", background: "#fff", color: "#C0200A", textDecoration: "none", marginLeft: "auto" }}>
-          🗓 วางแผนคอนเทนต์
-        </a>
-        <a href="/marketing/studio" style={{ fontSize: 12, padding: "6px 14px", borderRadius: 99, border: "0.5px solid #C0200A", background: "#C0200A", color: "#fff", textDecoration: "none" }}>
-          🎬 Studio ทำคลิป
-        </a>
         <button onClick={fetchData} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>
           🔄 รีเฟรช
         </button>
+      </div>
+
+      {/* ทางลัดไปเครื่องมือทำคอนเทนต์ */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <a href="/marketing/planner" style={{ flex: "1 1 260px", textDecoration: "none", background: "#fff", border: "1px solid #C0200A", borderRadius: 12, padding: "14px 18px", color: "#1a1a18" }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>🗓 วางแผนคอนเทนต์</div>
+          <div style={{ fontSize: 12, color: "#73726c", marginTop: 4 }}>ปฏิทิน · วิเคราะห์ยอดขายและเทรนด์ · คิดไอเดีย · เขียนสคริปต์</div>
+        </a>
+        <a href="/marketing/studio" style={{ flex: "1 1 260px", textDecoration: "none", background: "#C0200A", border: "1px solid #C0200A", borderRadius: 12, padding: "14px 18px", color: "#fff" }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>🎬 Studio ทำคลิป “พิกัดร้าน”</div>
+          <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>ใส่ฟุตเทจ ดูตัวอย่าง แล้วบันทึกเป็นไฟล์ 9:16</div>
+        </a>
+        <a href="/tasks" style={{ flex: "1 1 200px", textDecoration: "none", background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "14px 18px", color: "#1a1a18" }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>📋 งานของทีม</div>
+          <div style={{ fontSize: 12, color: "#73726c", marginTop: 4 }}>เพิ่มและติดตามงาน</div>
+        </a>
       </div>
 
       {loading && <p style={{ color: "#73726c", fontSize: 14 }}>กำลังโหลด...</p>}
@@ -245,7 +264,7 @@ export default function MarketingPage() {
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
                       <span style={{ fontSize: 20 }}>{CONTENT_ICON[c.contentType ?? ""] ?? "📋"}</span>
                       <div style={{ flex: 1 }}>
-                        <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>{c.title}</p>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: c.title.trim() ? "#1a1a18" : "#a0a09a" }}>{c.title.trim() || "(ยังไม่ได้ตั้งชื่อ)"}</p>
                         <div style={{ display: "flex", gap: 6, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
                           <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color, border: `0.5px solid ${st.border}`, fontWeight: 500 }}>
                             {c.status}

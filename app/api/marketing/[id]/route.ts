@@ -33,6 +33,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
     console.error("[PATCH /api/marketing/:id]", err);
-    return NextResponse.json({ error: "อัปเดตไม่สำเร็จ" }, { status: 500 });
+    return NextResponse.json({ error: "อัปเดตไม่สำเร็จ", detail: err instanceof Error ? err.message.slice(0, 200) : "" }, { status: 500 });
   }
 }

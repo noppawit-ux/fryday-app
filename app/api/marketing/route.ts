@@ -121,6 +121,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ campaign: mapPageToCampaign(page) }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/marketing]", err);
-    return NextResponse.json({ error: "สร้างแคมเปญไม่สำเร็จ" }, { status: 500 });
+    return NextResponse.json({ error: "สร้างแคมเปญไม่สำเร็จ", detail: err instanceof Error ? err.message.slice(0, 200) : "" }, { status: 500 });
   }
 }

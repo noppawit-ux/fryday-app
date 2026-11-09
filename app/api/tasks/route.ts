@@ -67,6 +67,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ task: newTask }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/tasks]", err);
-    return NextResponse.json({ error: "สร้างงานไม่สำเร็จ" }, { status: 500 });
+    return NextResponse.json({ error: "สร้างงานไม่สำเร็จ", detail: err instanceof Error ? err.message.slice(0, 200) : "" }, { status: 500 });
   }
 }
