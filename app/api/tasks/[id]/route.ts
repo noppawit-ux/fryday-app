@@ -8,11 +8,18 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status, done, priority, category, deadline, note } = body;
+    const { name, assigneeId, status, done, priority, category, deadline, note } = body;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const properties: Record<string, any> = {};
 
+    if (name !== undefined) {
+      if (typeof name !== "string" || name.trim() === "") {
+        return NextResponse.json({ error: "กรุณาระบุชื่องาน" }, { status: 400 });
+      }
+      properties["ชื่องาน"] = { title: [{ text: { content: name.trim() } }] };
+    }
+    if (assigneeId !== undefined) properties["ผู้รับผิดชอบ"] = { people: assigneeId ? [{ id: assigneeId }] : [] };
     if (status !== undefined)   properties["สถานะ"]       = { select:    { name: status } };
     if (done !== undefined)     properties["เสร็จแล้ว?"]  = { checkbox:  done };
     if (priority !== undefined) properties["ความสำคัญ"]   = { select:    { name: priority } };
@@ -29,7 +36,8 @@ export async function PATCH(
     return NextResponse.json({ task: updatedTask }, { status: 200 });
   } catch (err) {
     console.error("[PATCH /api/tasks/:id]", err);
-    return NextResponse.json({ error: "อัปเดตไม่สำเร็จ" }, { status: 500 });
+    const detail = err instanceof Error ? err.message.slice(0, 160) : undefined;
+    return NextResponse.json({ error: "อัปเดตไม่สำเร็จ", detail }, { status: 500 });
   }
 }
 
