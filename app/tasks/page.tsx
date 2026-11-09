@@ -28,10 +28,120 @@ function isOverdue(deadline: string | null, done: boolean): boolean {
   return new Date(deadline) < new Date();
 }
 
-function TaskCard({ task, onToggleDone, onChangeStatus }: {
+interface Person { id: string; name: string; avatar: string | null }
+interface FormState { name: string; status: TaskStatus; category: string; priority: string; deadline: string; note: string; assigneeId: string }
+
+const CATEGORIES = ["การตลาด", "ครัว", "การเงิน", "ทั่วไป", "HR"];
+const PRIORITIES = ["ปานกลาง", "ด่วนมาก", "ไม่เร่งด่วน"];
+const inp: React.CSSProperties = { width: "100%", fontSize: 14, padding: "9px 10px", borderRadius: 8, border: "0.5px solid #d3d1c7", background: "#fff", color: "#1a1a18", boxSizing: "border-box", font: "inherit" };
+const lab: React.CSSProperties = { display: "block", margin: "0 0 4px", fontSize: 12, color: "#73726c" };
+
+function Fields({ f, setF, people, peopleErr, showStatus, onEnter }: {
+  f: FormState; setF: (f: FormState) => void; people: Person[]; peopleErr: string; showStatus: boolean; onEnter?: () => void;
+}) {
+  // ถ้างานมีผู้รับผิดชอบที่ไม่อยู่ในรายชื่อ (เช่น ดึงรายชื่อไม่ได้) ยังต้องแสดงค่าเดิมให้เห็น
+  const known = people.some((p) => p.id === f.assigneeId);
+  return (
+    <div className="tk-form">
+      <label className="tk-wide"><span style={lab}>ชื่องาน *</span>
+        <input style={inp} autoFocus placeholder="เช่น ถ่ายคลิปพิกัดร้าน" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && onEnter?.()} /></label>
+      <label><span style={lab}>ผู้รับผิดชอบ</span>
+        <select style={inp} value={f.assigneeId} onChange={(e) => setF({ ...f, assigneeId: e.target.value })}>
+          <option value="">— ยังไม่มอบหมาย —</option>
+          {f.assigneeId && !known && <option value={f.assigneeId}>(คนเดิมของงานนี้)</option>}
+          {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        {peopleErr && <span style={{ display: "block", marginTop: 4, fontSize: 11.5, color: "#A32D2D" }}>{peopleErr}</span>}</label>
+      {showStatus && (
+        <label><span style={lab}>สถานะ</span>
+          <select style={inp} value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as TaskStatus })}>
+            {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
+          </select></label>
+      )}
+      <label><span style={lab}>หมวดหมู่</span>
+        <select style={inp} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></label>
+      <label><span style={lab}>ความสำคัญ</span>
+        <select style={inp} value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })}>{PRIORITIES.map((c) => <option key={c}>{c}</option>)}</select></label>
+      <label><span style={lab}>กำหนดเสร็จ</span>
+        <input style={inp} type="date" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} /></label>
+      <label className="tk-wide"><span style={lab}>หมายเหตุ</span>
+        <textarea style={{ ...inp, minHeight: 64, resize: "vertical" }} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
+    </div>
+  );
+}
+
+function EditModal({ task, people, peopleErr, onClose, onSaved }: {
+  task: FrydayTask; people: Person[]; peopleErr: string; onClose: () => void; onSaved: (msg: string) => void;
+}) {
+  const [f, setF] = useState<FormState>({
+    name: task.name === "(ไม่มีชื่อ)" ? "" : task.name,
+    status: task.status, category: task.category, priority: task.priority,
+    deadline: task.deadline?.slice(0, 10) ?? "", note: task.note ?? "",
+    assigneeId: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [confirmDel, setConfirmDel] = useState(false);
+
+  // จับคู่ผู้รับผิดชอบเดิมจากชื่อ (รายชื่ออาจโหลดมาทีหลังฟอร์ม) จนกว่าผู้ใช้จะเลือกเอง
+  const [touched, setTouched] = useState(false);
+  const matchedId = people.find((p) => p.name === task.assignee)?.id ?? "";
+  const effective: FormState = touched ? f : { ...f, assigneeId: matchedId };
+  const onChange = (n: FormState) => { if (n.assigneeId !== effective.assigneeId) setTouched(true); setF(n); };
+
+  const save = async () => {
+    if (!f.name.trim()) { setErr("กรุณาใส่ชื่องาน"); return; }
+    setBusy(true); setErr("");
+    const body: Record<string, unknown> = {
+      name: f.name, status: f.status, category: f.category, priority: f.priority,
+      deadline: f.deadline || null, note: f.note || "", done: f.status === "เสร็จแล้ว",
+    };
+    // ไม่แตะผู้รับผิดชอบ ถ้ายังไม่ได้เลือกเองและจับคู่คนเดิมไม่ได้ (กันลบคนเดิมโดยไม่ตั้งใจ)
+    if (touched || matchedId || !task.assignee) body.assigneeId = effective.assigneeId || null;
+    const res = await fetch(`/api/tasks/${task.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+    const data = res ? await res.json().catch(() => ({})) : {};
+    setBusy(false);
+    if (!res?.ok) { setErr([data.error ?? "เชื่อมต่อไม่ได้", data.detail].filter(Boolean).join(" · ")); return; }
+    onSaved(`บันทึกงาน “${f.name.trim()}” แล้ว`);
+  };
+
+  const del = async () => {
+    if (!confirmDel) { setConfirmDel(true); return; }
+    setBusy(true); setErr("");
+    const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" }).catch(() => null);
+    setBusy(false);
+    if (!res?.ok) { setErr("ลบงานไม่สำเร็จ"); return; }
+    onSaved(`ลบงาน “${task.name}” แล้ว`);
+  };
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div role="dialog" aria-label="แก้ไขงาน" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", width: "100%", maxWidth: 640, maxHeight: "92vh", overflow: "auto" }}>
+        <p style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 500 }}>แก้ไขงาน</p>
+        <Fields f={effective} setF={onChange} people={people} peopleErr={peopleErr} showStatus onEnter={save} />
+        {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D" }}>❌ {err}</p>}
+        <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <button onClick={del} disabled={busy} style={{ fontSize: 13.5, padding: "9px 16px", borderRadius: 99, border: "0.5px solid #F7C1C1", background: confirmDel ? "#FCEBEB" : "transparent", color: "#791F1F", cursor: "pointer" }}>{confirmDel ? "ยืนยันลบงาน" : "ลบงาน"}</button>
+          <span style={{ flex: 1 }} />
+          <button onClick={onClose} style={{ fontSize: 14, padding: "9px 18px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>ยกเลิก</button>
+          <button onClick={save} disabled={busy} style={{ fontSize: 14, padding: "9px 22px", borderRadius: 99, border: "none", background: "#C0200A", color: "#fff", cursor: "pointer", fontWeight: 600, opacity: busy ? 0.6 : 1 }}>{busy ? "กำลังบันทึก…" : "บันทึก"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TaskCard({ task, onToggleDone, onChangeStatus, onEdit }: {
   task: FrydayTask;
   onToggleDone: (id: string, done: boolean) => void;
   onChangeStatus: (id: string, status: TaskStatus) => void;
+  onEdit: (task: FrydayTask) => void;
 }) {
   const overdue = isOverdue(task.deadline, task.done);
   return (
@@ -43,29 +153,35 @@ function TaskCard({ task, onToggleDone, onChangeStatus }: {
             {CATEGORY_BADGE[task.category] ?? "📋"} {task.name}
           </p>
           <div style={{ display: "flex", gap: "2px 10px", marginTop: 4, flexWrap: "wrap", alignItems: "center" }}>
-            {task.assignee && <span style={{ fontSize: 12, color: "#73726c" }}>👤 {task.assignee}</span>}
+            {task.assignee
+              ? <span style={{ fontSize: 12, color: "#73726c" }}>👤 {task.assignee}</span>
+              : <span style={{ fontSize: 12, color: "#aaa" }}>👤 ยังไม่มอบหมาย</span>}
             {task.deadline && <span style={{ fontSize: 12, color: overdue ? "#A32D2D" : "#73726c", fontWeight: overdue ? 500 : 400 }}>{overdue ? "⚠️" : "📅"} {formatDate(task.deadline)}</span>}
             <span style={{ fontSize: 12, color: "#73726c" }}>{PRIORITY_BADGE[task.priority]} {task.priority}</span>
           </div>
           {task.note && <p style={{ margin: "6px 0 0", fontSize: 12.5, color: "#73726c", lineHeight: 1.5, overflowWrap: "anywhere" }}>{task.note}</p>}
         </div>
       </div>
+      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
       <select
         aria-label="เปลี่ยนสถานะ"
         value={task.status}
         onChange={(e) => onChangeStatus(task.id, e.target.value as TaskStatus)}
-        style={{ marginTop: 10, width: "100%", font: "inherit", fontSize: 12.5, padding: "6px 8px", borderRadius: 8, border: `0.5px solid ${STATUS_CONFIG[task.status].border}`, background: STATUS_CONFIG[task.status].bg, color: STATUS_CONFIG[task.status].color, cursor: "pointer" }}
+        style={{ flex: 1, minWidth: 0, font: "inherit", fontSize: 12.5, padding: "6px 8px", borderRadius: 8, border: `0.5px solid ${STATUS_CONFIG[task.status].border}`, background: STATUS_CONFIG[task.status].bg, color: STATUS_CONFIG[task.status].color, cursor: "pointer" }}
       >
         {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
       </select>
+      <button onClick={() => onEdit(task)} aria-label={`แก้ไขงาน ${task.name}`} style={{ flex: "none", font: "inherit", fontSize: 12.5, padding: "6px 12px", borderRadius: 8, border: "0.5px solid #d3d1c7", background: "#fff", color: "#444", cursor: "pointer" }}>✏️ แก้ไข</button>
+      </div>
     </div>
   );
 }
 
-function Column({ status, tasks, onToggleDone, onChangeStatus }: {
+function Column({ status, tasks, onToggleDone, onChangeStatus, onEdit }: {
   status: TaskStatus; tasks: FrydayTask[];
   onToggleDone: (id: string, done: boolean) => void;
   onChangeStatus: (id: string, status: TaskStatus) => void;
+  onEdit: (task: FrydayTask) => void;
 }) {
   const cfg = STATUS_CONFIG[status];
   return (
@@ -76,27 +192,22 @@ function Column({ status, tasks, onToggleDone, onChangeStatus }: {
       </div>
       {tasks.length === 0
         ? <p style={{ textAlign: "center", fontSize: 12.5, color: "#aaa", margin: 0, padding: "28px 0", border: "1px dashed #d3d1c7", borderRadius: 10 }}>ไม่มีงาน</p>
-        : tasks.map((t) => <TaskCard key={t.id} task={t} onToggleDone={onToggleDone} onChangeStatus={onChangeStatus} />)
+        : tasks.map((t) => <TaskCard key={t.id} task={t} onToggleDone={onToggleDone} onChangeStatus={onChangeStatus} onEdit={onEdit} />)
       }
     </section>
   );
 }
 
-const CATEGORIES = ["การตลาด", "ครัว", "การเงิน", "ทั่วไป", "HR"];
-const PRIORITIES = ["ปานกลาง", "ด่วนมาก", "ไม่เร่งด่วน"];
-
-function AddTaskForm({ onClose, onAdded }: { onClose: () => void; onAdded: (name: string) => void }) {
+function AddTaskForm({ people, peopleErr, onClose, onAdded }: { people: Person[]; peopleErr: string; onClose: () => void; onAdded: (name: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [added, setAdded] = useState("");
-  const [f, setF] = useState({ name: "", category: "การตลาด", priority: "ปานกลาง", deadline: "", note: "" });
-  const inp: React.CSSProperties = { width: "100%", fontSize: 14, padding: "9px 10px", borderRadius: 8, border: "0.5px solid #d3d1c7", background: "#fff", color: "#1a1a18", boxSizing: "border-box", font: "inherit" };
-  const lab: React.CSSProperties = { display: "block", margin: "0 0 4px", fontSize: 12, color: "#73726c" };
+  const [f, setF] = useState<FormState>({ name: "", status: "รอดำเนินการ", category: "การตลาด", priority: "ปานกลาง", deadline: "", note: "", assigneeId: "" });
 
   const submit = async () => {
     if (!f.name.trim()) { setErr("กรุณาใส่ชื่องาน"); return; }
     setBusy(true); setErr(""); setAdded("");
-    const res = await fetch("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: f.name, category: f.category, priority: f.priority, deadline: f.deadline || undefined, note: f.note || undefined, status: "รอดำเนินการ" }) }).catch(() => null);
+    const res = await fetch("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: f.name, category: f.category, priority: f.priority, deadline: f.deadline || undefined, note: f.note || undefined, assigneeId: f.assigneeId || undefined, status: "รอดำเนินการ" }) }).catch(() => null);
     const data = res ? await res.json().catch(() => ({})) : {};
     setBusy(false);
     if (!res?.ok) { setErr([data.error ?? "เชื่อมต่อไม่ได้", data.detail].filter(Boolean).join(" · ")); return; }
@@ -109,18 +220,7 @@ function AddTaskForm({ onClose, onAdded }: { onClose: () => void; onAdded: (name
   return (
     <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 18px", marginBottom: 16 }}>
       <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 500 }}>เพิ่มงานใหม่</p>
-      <div className="tk-form">
-        <label className="tk-wide"><span style={lab}>ชื่องาน *</span>
-          <input style={inp} autoFocus placeholder="เช่น ถ่ายคลิปพิกัดร้าน" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && submit()} /></label>
-        <label><span style={lab}>หมวดหมู่</span>
-          <select style={inp} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></label>
-        <label><span style={lab}>ความสำคัญ</span>
-          <select style={inp} value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })}>{PRIORITIES.map((c) => <option key={c}>{c}</option>)}</select></label>
-        <label><span style={lab}>กำหนดเสร็จ</span>
-          <input style={inp} type="date" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} /></label>
-        <label className="tk-wide"><span style={lab}>หมายเหตุ</span>
-          <textarea style={{ ...inp, minHeight: 64, resize: "vertical" }} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
-      </div>
+      <Fields f={f} setF={setF} people={people} peopleErr={peopleErr} showStatus={false} onEnter={submit} />
       {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D" }}>❌ {err}</p>}
       {added && <p role="status" style={{ margin: "10px 0 0", fontSize: 13, color: "#27500A" }}>✓ เพิ่มงาน “{added}” แล้ว กรอกต่อเพื่อเพิ่มงานถัดไปได้</p>}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -156,6 +256,9 @@ export default function TasksPage() {
   const [showDone, setShowDone] = useState(false);
   const [adding, setAdding] = useState(false);
   const [notice, setNotice] = useState("");
+  const [editing, setEditing] = useState<FrydayTask | null>(null);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [peopleErr, setPeopleErr] = useState("");
 
   const fetchTasks = useCallback(async () => {
     setLoading(true); setError(null);
@@ -172,6 +275,17 @@ export default function TasksPage() {
   }, [filter, showDone]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
+
+  useEffect(() => {
+    let off = false;
+    fetch("/api/users").then(async (r) => {
+      const d = await r.json().catch(() => ({}));
+      if (off) return;
+      if (r.ok) setPeople(d.people ?? []);
+      else setPeopleErr([d.error, d.detail].filter(Boolean).join(" · ") || "ดึงรายชื่อไม่ได้");
+    }).catch(() => { if (!off) setPeopleErr("ดึงรายชื่อผู้รับผิดชอบไม่ได้"); });
+    return () => { off = true; };
+  }, []);
 
   const handleToggleDone = async (id: string, done: boolean) => {
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done, status: done ? "เสร็จแล้ว" : t.status } : t));
@@ -208,7 +322,7 @@ export default function TasksPage() {
         <button onClick={fetchTasks} style={pill(false, "", "", "")}>🔄 รีเฟรช</button>
       </div>
 
-      {adding && <AddTaskForm onClose={() => setAdding(false)} onAdded={(name) => { setNotice(`เพิ่มงาน “${name}” แล้ว`); setFilter("all"); fetchTasks(); }} />}
+      {adding && <AddTaskForm people={people} peopleErr={peopleErr} onClose={() => setAdding(false)} onAdded={(name) => { setNotice(`เพิ่มงาน “${name}” แล้ว`); setFilter("all"); fetchTasks(); }} />}
       {notice && !adding && <p role="status" style={{ margin: "0 0 12px", fontSize: 13, color: notice.startsWith("เพิ่ม") ? "#27500A" : "#A32D2D" }}>{notice}</p>}
 
       {loading && <p style={{ color: "#73726c", fontSize: 14 }}>กำลังโหลด...</p>}
@@ -233,11 +347,12 @@ export default function TasksPage() {
           </div>
           <div className={filter === "all" ? "tk-board" : "tk-board one"}>
             {(filter === "all" ? allStatuses : [filter as TaskStatus]).map((s) => (
-              <Column key={s} status={s} tasks={byStatus(s)} onToggleDone={handleToggleDone} onChangeStatus={handleChangeStatus} />
+              <Column key={s} status={s} tasks={byStatus(s)} onToggleDone={handleToggleDone} onChangeStatus={handleChangeStatus} onEdit={setEditing} />
             ))}
           </div>
         </>
       )}
+      {editing && <EditModal key={editing.id} task={editing} people={people} peopleErr={peopleErr} onClose={() => setEditing(null)} onSaved={(msg) => { setEditing(null); setNotice(msg); fetchTasks(); }} />}
     </main>
   );
 }
