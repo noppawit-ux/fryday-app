@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { notion } from "@/lib/notion";
+import { toBlocks } from "@/lib/notion-notes";
 
 const MARKETING_DB_ID = process.env.NOTION_MARKETING_DB_ID!;
 
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { title, contentType, channels, status, postDate, budget, assigneeId, link } = body;
+    const { title, contentType, channels, status, postDate, budget, assigneeId, link, notes } = body;
 
     if (!title) return NextResponse.json({ error: "กรุณาระบุชื่อแคมเปญ" }, { status: 400 });
 
@@ -114,6 +115,7 @@ export async function POST(req: NextRequest) {
     const page = await notion.pages.create({
       parent: { database_id: MARKETING_DB_ID },
       properties,
+      ...(notes ? { children: toBlocks(String(notes)) } : {}),
     });
 
     return NextResponse.json({ campaign: mapPageToCampaign(page) }, { status: 201 });

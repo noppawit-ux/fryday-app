@@ -391,6 +391,7 @@ export default function StudioPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <a href="/marketing" style={{ fontSize: 13, color: MUTED, textDecoration: "none" }}>← Marketing</a>
         <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>🎬 Studio · คลิป “พิกัดร้าน”</h1>
+        <a href="/marketing/planner" style={{ fontSize: 13, color: MUTED, textDecoration: "none", marginLeft: "auto" }}>🗓 วางแผนคอนเทนต์ →</a>
       </div>
       <p style={{ margin: "0 0 18px", fontSize: 14, color: MUTED }}>
         กรอกข้อมูลร้าน ใส่ฟุตเทจทีละช็อต ดูตัวอย่าง แล้วกดบันทึกเป็นไฟล์ 9:16 ใช้เวลาเท่าความยาวคลิป ฟุตเทจอยู่ในเครื่องนี้เท่านั้น ไม่ถูกอัปโหลด
