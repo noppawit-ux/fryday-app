@@ -36,9 +36,11 @@ function extractText(prop: any): string | null {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapPageToTask(page: any): FrydayTask {
   const props = page.properties;
+  // หา property ชนิด title จริงๆ (ชื่อคอลัมน์ใน Notion อาจไม่ใช่ "ชื่องาน") แล้วค่อย fallback ไปชื่อเดิม
+  const titleProp = Object.values(props).find((p) => (p as { type?: string })?.type === "title");
   return {
     id: page.id,
-    name: extractText(props["ชื่องาน"]) ?? "(ไม่มีชื่อ)",
+    name: extractText(titleProp) ?? extractText(props["ชื่องาน"]) ?? "(ไม่มีชื่อ)",
     assignee: props["ผู้รับผิดชอบ"]?.people?.[0]?.name ?? null,
     assigneeAvatar: props["ผู้รับผิดชอบ"]?.people?.[0]?.avatar_url ?? null,
     status: (props["สถานะ"]?.select?.name as TaskStatus) ?? "รอดำเนินการ",
