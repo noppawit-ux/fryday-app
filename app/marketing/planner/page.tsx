@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 /* ---------- วางแผนคอนเทนต์: ปฏิทิน · ไอเดีย · สคริปต์ ----------
    ใช้ข้อมูลชุดเดียวกับหน้า Marketing (ตารางแคมเปญใน Notion) */
 
-interface Campaign { id: string; title: string; contentType: string | null; channels: string[]; status: string; postDate: string | null; link: string | null }
+interface Campaign { id: string; title: string; contentType: string | null; channels: string[]; status: string; postDate: string | null; link: string | null; reach?: number; engagement?: number; salesIncrease?: number }
 interface Idea { title: string; format: string; channels: string[]; hook: string; why: string; effort: string }
 interface Shot { t: string; visual: string; onscreen: string; voice: string }
 interface Script { hook: string; shots: Shot[]; caption: string; hashtags: string[]; cta: string; props: string[]; tips: string[] }
@@ -60,7 +60,8 @@ function scriptText(d: Draft, sc: Script) {
 }
 
 export default function PlannerPage() {
-  const [tab, setTab] = useState<"cal" | "ideas" | "script">("cal");
+  const [tab, setTab] = useState<"cal" | "insight" | "ideas" | "script">("cal");
+  const [theme, setTheme] = useState("");
   const [items, setItems] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -91,13 +92,14 @@ export default function PlannerPage() {
         <a href="/marketing/studio" style={{ ...btn, marginLeft: "auto", textDecoration: "none", color: "#1a1a18" }}>🎬 Studio ทำคลิป</a>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {tabBtn("cal", "ปฏิทิน")}{tabBtn("ideas", "คิดไอเดีย")}{tabBtn("script", "ออกแบบสคริปต์")}
+        {tabBtn("cal", "ปฏิทิน")}{tabBtn("insight", "วิเคราะห์ข้อมูล")}{tabBtn("ideas", "คิดไอเดีย")}{tabBtn("script", "ออกแบบสคริปต์")}
       </div>
       {err && <p role="alert" style={{ color: RED, fontSize: 14 }}>❌ {err}</p>}
       {loading && <p style={{ color: MUTED, fontSize: 14 }}>กำลังโหลด…</p>}
 
       {tab === "cal" && <Calendar items={items} reload={load} toScript={(c) => { setDraft({ title: c.title, format: "พิกัดร้าน", channel: "", notes: "", campaignId: c.id }); setTab("script"); }} />}
-      {tab === "ideas" && <Ideas items={items} brand={brand} saveBrand={saveBrand} reload={load} toScript={(i, id) => { setDraft({ title: i.title, format: i.format, channel: i.channels[0] ?? "", notes: `ฮุกที่คิดไว้: ${i.hook}`, campaignId: id }); setTab("script"); }} />}
+      {tab === "insight" && <Insights items={items} toIdeas={(t) => { setTheme(t); setTab("ideas"); }} />}
+      {tab === "ideas" && <Ideas items={items} theme={theme} setTheme={setTheme} brand={brand} saveBrand={saveBrand} reload={load} toScript={(i, id) => { setDraft({ title: i.title, format: i.format, channel: i.channels[0] ?? "", notes: `ฮุกที่คิดไว้: ${i.hook}`, campaignId: id }); setTab("script"); }} />}
       {tab === "script" && <ScriptDesigner brand={brand} draft={draft} setDraft={setDraft} reload={load} />}
     </main>
   );
@@ -238,11 +240,10 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
 }
 
 /* ---------------- คิดไอเดีย ---------------- */
-function Ideas({ items, brand, saveBrand, reload, toScript }: { items: Campaign[]; brand: string; saveBrand: (v: string) => void; reload: () => void; toScript: (i: Idea, id: string | null) => void }) {
+function Ideas({ items, theme, setTheme, brand, saveBrand, reload, toScript }: { items: Campaign[]; theme: string; setTheme: (v: string) => void; brand: string; saveBrand: (v: string) => void; reload: () => void; toScript: (i: Idea, id: string | null) => void }) {
   const [channel, setChannel] = useState("");
   const [formats, setFormats] = useState<string[]>([]);
   const [count, setCount] = useState(5);
-  const [theme, setTheme] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [res, setRes] = useState<Idea[]>([]);
@@ -267,8 +268,8 @@ function Ideas({ items, brand, saveBrand, reload, toScript }: { items: Campaign[
       <section style={{ ...card, flex: "1 1 320px" }}>
         <label style={lab}>ข้อมูลร้านที่ AI ใช้ (แก้ได้ จำไว้ในเครื่องนี้)</label>
         <textarea style={{ ...input, minHeight: 130 }} value={brand} onChange={(e) => saveBrand(e.target.value)} />
-        <label style={{ ...lab, marginTop: 10 }}>เทรนด์ เสียง หรือเหตุการณ์ที่คุณเห็นช่วงนี้</label>
-        <textarea style={{ ...input, minHeight: 64 }} placeholder="เช่น เสียงที่ฮิตใน TikTok, วันหยุดยาวที่จะถึง, เมนูใหม่" value={theme} onChange={(e) => setTheme(e.target.value)} />
+        <label style={{ ...lab, marginTop: 10 }}>เทรนด์ ข้อมูลยอดขาย หรือเหตุการณ์ที่อยากให้ใช้ (กด “ส่งไปคิดไอเดีย” จากแท็บวิเคราะห์จะมาใส่ที่นี่)</label>
+        <textarea style={{ ...input, minHeight: 110 }} placeholder="เช่น เสียงที่ฮิตใน TikTok, วันหยุดยาวที่จะถึง, เมนูใหม่" value={theme} onChange={(e) => setTheme(e.target.value)} />
         <p style={{ margin: "4px 0 0", fontSize: 11, color: MUTED }}>AI ไม่เห็นเทรนด์ปัจจุบัน ถ้าไม่ใส่ จะได้ไอเดียที่ไม่ผูกกับเทรนด์</p>
         <label style={{ ...lab, marginTop: 10 }}>ช่องทางที่เน้น</label>
         <select style={input} value={channel} onChange={(e) => setChannel(e.target.value)}><option value="">ทุกช่องทาง</option>{CHANNELS.map((c) => <option key={c}>{c}</option>)}</select>
@@ -378,6 +379,146 @@ function ScriptDesigner({ brand, draft, setDraft, reload }: { brand: string; dra
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+/* ---------------- วิเคราะห์ข้อมูล: ยอดขายร้าน + เทรนด์จากเว็บ ---------------- */
+interface SalesRes { summary: string; findings: { title: string; evidence: string; contentAngle: string; confidence: string }[]; heroMenus: { name: string; reason: string }[]; timing: { days: string[]; hours: string; reasoning: string }; ideas: { title: string; format: string; hook: string; basedOn: string }[]; gaps: string[] }
+interface Src { url: string; title: string; age: string }
+interface TrendRes { summary: string; trends: { name: string; what: string; evidence: string; confidence: string; useForFryday: string; sources: Src[] }[]; formats: { format: string; note: string; sources: Src[] }[]; cautions: string[]; gaps: string[] }
+
+function Sources({ list }: { list: Src[] }) {
+  return (
+    <div style={{ fontSize: 12, marginTop: 6 }}>
+      {list.map((x) => (
+        <a key={x.url} href={x.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", color: "#185FA5", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          ↗ {x.title}{x.age ? ` · ${x.age}` : ""}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+const Conf = ({ v }: { v: string }) => (v ? <span style={{ fontSize: 11, padding: "1px 8px", borderRadius: 99, background: v === "สูง" ? "#EAF3DE" : v === "ต่ำ" ? "#FCEBEB" : "#FAEEDA", color: v === "สูง" ? "#27500A" : v === "ต่ำ" ? "#A32D2D" : "#854F0B" }}>เชื่อได้{v}</span> : null);
+
+function Insights({ items, toIdeas }: { items: Campaign[]; toIdeas: (theme: string) => void }) {
+  const [need, setNeed] = useState<null | "sales" | "trends">(null);
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState<"" | "sales" | "trends">("");
+  const [err, setErr] = useState("");
+  const [sales, setSales] = useState<{ r: SalesRes; asOf: string; posts: number } | null>(null);
+  const [trends, setTrends] = useState<{ r: TrendRes; at: string; found: number } | null>(null);
+  const [channel, setChannel] = useState("");
+  const [focus, setFocus] = useState("");
+
+  const run = async (kind: "sales" | "trends") => {
+    setBusy(kind); setErr(""); setNeed(null);
+    const posts = items.filter((c) => c.status === "โพสต์แล้ว" || c.status === "วัดผล").map((c) => ({ title: c.title, type: c.contentType, channels: c.channels, date: c.postDate?.slice(0, 10), reach: c.reach, engagement: c.engagement, sales: c.salesIncrease }));
+    const res = await fetch("/api/marketing/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kind === "sales" ? { mode: "sales", posts } : { mode: "trends", channel, focus }) }).catch(() => null);
+    const data = res ? await res.json().catch(() => ({})) : { error: "เชื่อมต่อไม่ได้" };
+    setBusy("");
+    if (res?.status === 401) { setNeed(kind); return; }
+    if (!res?.ok) { setErr(data.error ?? "ไม่สำเร็จ"); return; }
+    if (kind === "sales") setSales({ r: data.result, asOf: data.asOf, posts: data.postsUsed }); else setTrends({ r: data.result, at: data.fetchedAt, found: data.sourcesFound });
+  };
+  const login = async () => {
+    const res = await fetch("/api/roadmap/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw }) }).catch(() => null);
+    const d = res ? await res.json().catch(() => ({})) : {};
+    if (res?.ok && need) { setPw(""); await run(need); } else setErr(d.error ?? "เข้าสู่ระบบไม่สำเร็จ");
+  };
+
+  const toTheme = () => {
+    const parts: string[] = [];
+    if (sales) parts.push(`[จากยอดขายร้าน ณ ${sales.asOf}] ${sales.r.summary}`, sales.r.heroMenus.length ? `เมนูที่ควรเป็นพระเอก: ${sales.r.heroMenus.map((m) => m.name).join(", ")}` : "", sales.r.timing.days.length ? `วันที่เน้น: ${sales.r.timing.days.join(", ")}` : "");
+    if (trends) parts.push(`[เทรนด์จากเว็บ] ${trends.r.trends.slice(0, 4).map((t) => `${t.name}: ${t.useForFryday}`).join(" | ")}`);
+    toIdeas(parts.filter(Boolean).join("\n").slice(0, 1700));
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <p style={{ margin: 0, fontSize: 13, color: MUTED }}>
+        วิเคราะห์ยอดขายจริงของร้านเพื่อดูว่าควรทำคลิปเมนูไหนและโพสต์เมื่อไร แล้วค้นเทรนด์วิดีโอจากเว็บพร้อมลิงก์แหล่งที่มา ทั้งสองส่วนให้ข้อมูลประกอบการตัดสินใจ ไม่รับประกันว่าคลิปจะปัง และเทรนด์ในแอป (เสียง แฮชแท็ก) ยังต้องเช็กในแอปเอง
+      </p>
+      {err && <p role="alert" style={{ color: RED, fontSize: 14, margin: 0 }}>{err}</p>}
+      {need && (
+        <section style={{ ...card, maxWidth: 380 }}>
+          <p style={{ margin: "0 0 8px", fontSize: 14 }}>ส่วนนี้ใช้ข้อมูลยอดขายและค่าใช้จ่ายของ AI ใส่รหัสผ่านเดียวกับหน้า Roadmap</p>
+          <input type="password" autoFocus aria-label="รหัสผ่าน" style={input} value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && pw && login()} />
+          <button style={{ ...btnP, marginTop: 8 }} disabled={!pw} onClick={login}>เข้าสู่ระบบแล้วทำต่อ</button>
+        </section>
+      )}
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+        {/* ยอดขาย */}
+        <section style={{ ...card, flex: "1 1 440px", minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0, fontSize: 16 }}>📊 จากยอดขายในร้าน</h2>
+            <button style={{ ...btnP, marginLeft: "auto", opacity: busy ? 0.6 : 1 }} disabled={!!busy} onClick={() => run("sales")}>{busy === "sales" ? "กำลังวิเคราะห์…" : sales ? "วิเคราะห์ใหม่" : "วิเคราะห์ยอดขาย"}</button>
+          </div>
+          {!sales && busy !== "sales" && <p style={{ margin: "10px 0 0", fontSize: 13, color: MUTED }}>อ่านยอดขายล่าสุด เมนูขายดี ช่องทางหน้าร้านกับเดลิเวอรี และผลโพสต์ที่เคยบันทึกไว้ แล้วสรุปเป็นข้อเสนอทำคอนเทนต์</p>}
+          {sales && (
+            <div style={{ fontSize: 14, marginTop: 10 }}>
+              <p style={{ margin: "0 0 10px" }}>{sales.r.summary}</p>
+              <p style={{ margin: "0 0 10px", fontSize: 12, color: MUTED }}>ข้อมูลถึง {sales.asOf} · ใช้ผลโพสต์ {sales.posts} รายการ{sales.posts < 10 ? " (น้อยเกินกว่าจะเทียบผลโพสต์ได้แน่นอน)" : ""}</p>
+              {sales.r.findings.map((f, i) => (
+                <div key={i} style={{ borderTop: `1px solid ${LINE}`, padding: "8px 0" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><b>{f.title}</b><Conf v={f.confidence} /></div>
+                  <div style={{ fontSize: 13, color: MUTED }}>{f.evidence}</div>
+                  <div style={{ fontSize: 13 }}>→ {f.contentAngle}</div>
+                </div>
+              ))}
+              {sales.r.heroMenus.length > 0 && <p style={{ margin: "8px 0 2px" }}><b>เมนูพระเอก</b></p>}
+              {sales.r.heroMenus.map((m, i) => <div key={i} style={{ fontSize: 13 }}>• <b>{m.name}</b> {m.reason}</div>)}
+              {(sales.r.timing.days.length > 0 || sales.r.timing.hours) && (
+                <p style={{ margin: "10px 0 0", fontSize: 13 }}><b>จังหวะโพสต์:</b> {sales.r.timing.days.join(", ")} {sales.r.timing.hours} <span style={{ color: MUTED }}>({sales.r.timing.reasoning})</span></p>
+              )}
+              {sales.r.ideas.length > 0 && <p style={{ margin: "10px 0 2px" }}><b>ไอเดียจากข้อมูล</b></p>}
+              {sales.r.ideas.map((i, k) => <div key={k} style={{ fontSize: 13, marginBottom: 4 }}>• {i.title} <span style={{ color: MUTED }}>({i.format}) {i.basedOn}</span></div>)}
+              {sales.r.gaps.length > 0 && (
+                <div style={{ marginTop: 10, background: "#FFF8E6", borderRadius: 8, padding: 8, fontSize: 12 }}>
+                  <b>ข้อมูลที่ยังไม่ครบ</b>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{sales.r.gaps.map((g, i) => <li key={i}>{g}</li>)}</ul>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* เทรนด์ */}
+        <section style={{ ...card, flex: "1 1 440px", minWidth: 0 }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: 16 }}>🔎 เทรนด์วิดีโอจากเว็บ</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 8 }}>
+            <select style={input} aria-label="ช่องทาง" value={channel} onChange={(e) => setChannel(e.target.value)}><option value="">ทุกช่องทาง</option>{CHANNELS.map((c) => <option key={c}>{c}</option>)}</select>
+            <input style={input} placeholder="เจาะเรื่อง (ไม่บังคับ) เช่น ASMR ไก่ทอด" value={focus} onChange={(e) => setFocus(e.target.value)} />
+          </div>
+          <button style={{ ...btnP, marginTop: 8, opacity: busy ? 0.6 : 1 }} disabled={!!busy} onClick={() => run("trends")}>{busy === "trends" ? "กำลังค้นเว็บ… (ราว 30–60 วินาที)" : trends ? "ค้นใหม่" : "ค้นเทรนด์"}</button>
+          {trends && (
+            <div style={{ fontSize: 14, marginTop: 10 }}>
+              <p style={{ margin: "0 0 4px" }}>{trends.r.summary}</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, color: MUTED }}>ค้นเมื่อ {new Date(trends.at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })} · พบแหล่ง {trends.found} แห่ง แสดงเฉพาะข้อที่มีลิงก์ยืนยันได้</p>
+              {trends.r.trends.length === 0 && <p style={{ color: MUTED, fontSize: 13 }}>ไม่มีเทรนด์ที่ยืนยันแหล่งได้ ลองเจาะหัวข้อให้แคบลง</p>}
+              {trends.r.trends.map((t, i) => (
+                <div key={i} style={{ borderTop: `1px solid ${LINE}`, padding: "8px 0" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><b>{t.name}</b><Conf v={t.confidence} /></div>
+                  <div style={{ fontSize: 13 }}>{t.what}</div>
+                  <div style={{ fontSize: 12, color: MUTED }}>{t.evidence}</div>
+                  <div style={{ fontSize: 13 }}>→ <b>กับ Fryday:</b> {t.useForFryday}</div>
+                  <Sources list={t.sources} />
+                </div>
+              ))}
+              {trends.r.formats.length > 0 && <p style={{ margin: "8px 0 2px" }}><b>รูปแบบที่แหล่งบอกว่าได้ผล</b></p>}
+              {trends.r.formats.map((f, i) => <div key={i} style={{ fontSize: 13, marginBottom: 4 }}>• <b>{f.format}</b> {f.note}<Sources list={f.sources} /></div>)}
+              {trends.r.cautions.length > 0 && <div style={{ marginTop: 8, background: "#FFF8E6", borderRadius: 8, padding: 8, fontSize: 12 }}><b>ข้อควรระวัง</b><ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{trends.r.cautions.map((g, i) => <li key={i}>{g}</li>)}</ul></div>}
+              {trends.r.gaps.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: MUTED }}>หาไม่เจอ: {trends.r.gaps.join(" · ")}</div>}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {(sales || trends) && (
+        <div><button style={btnP} onClick={toTheme}>✨ ส่งไปคิดไอเดีย</button> <span style={{ fontSize: 12, color: MUTED }}>นำสรุปข้อมูลข้างบนไปเป็นโจทย์ในแท็บคิดไอเดีย</span></div>
+      )}
     </div>
   );
 }

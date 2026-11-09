@@ -34,7 +34,7 @@ function parse(body: unknown): Ideas | Script | null {
       channel: s(b.channel, 30),
       formats,
       count: Math.min(10, Math.max(1, Number(b.count) || 5)),
-      theme: s(b.theme, 600),
+      theme: s(b.theme, 1800),
       existing: Array.isArray(b.existing) ? b.existing.slice(0, 40).map((x) => s(x, 80)) : [],
     };
   }
