@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ImportPlan, Results, Survey } from "./results";
 import "./planner.css";
+import { buildIcs, downloadIcs } from "./ics";
 
 /* ---------- วางแผนคอนเทนต์: ปฏิทิน · ไอเดีย · สคริปต์ ----------
    ใช้ข้อมูลชุดเดียวกับหน้า Marketing (ตารางแคมเปญใน Notion) */
@@ -163,6 +164,14 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
   const [quick, setQuick] = useState({ title: "", format: "พิกัดร้าน" });
   const [perWeek, setPerWeek] = useState<number[]>([2, 5, 0]);
   const [plan, setPlan] = useState<{ id: string; title: string; date: string }[] | null>(null);
+  const [exp, setExp] = useState(false);
+  const [expOpt, setExpOpt] = useState({ posts: true, shoots: true, includeDone: false });
+  const [expMsg, setExpMsg] = useState("");
+  const exportIcs = () => {
+    const { text, count } = buildIcs(items, expOpt);
+    if (!count) { setExpMsg("ไม่มีรายการที่จะส่งออก ลองติ๊ก “รวมที่โพสต์แล้ว” หรือกำหนดวันโพสต์ก่อน"); return; }
+    downloadIcs(text); setExpMsg(`สร้างไฟล์แล้ว ${count} รายการ เปิดไฟล์ที่ดาวน์โหลดเพื่อเพิ่มลงปฏิทิน`);
+  };
 
   const byDate = useMemo(() => {
     const m = new Map<string, Campaign[]>();
@@ -217,7 +226,21 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
           <button style={btn} onClick={() => go(-1)} aria-label="เดือนก่อน">‹</button>
           <strong style={{ flex: 1, textAlign: "center" }}>{title}</strong>
           <button style={btn} onClick={() => go(1)} aria-label="เดือนถัดไป">›</button>
+          <button style={{ ...btn, fontWeight: 600 }} aria-expanded={exp} onClick={() => { setExp((v) => !v); setExpMsg(""); }}>📲 ลงปฏิทินมือถือ</button>
         </div>
+        {exp && (
+          <div role="group" aria-label="ส่งออกลงปฏิทินมือถือ" style={{ background: "#FBF9F3", border: `1px solid ${LINE}`, borderRadius: 10, padding: 12, marginBottom: 10, fontSize: 13 }}>
+            <strong>ดาวน์โหลดเป็นไฟล์ปฏิทิน (.ics)</strong>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "8px 0" }}>
+              <label><input type="checkbox" checked={expOpt.posts} onChange={(e) => setExpOpt((o) => ({ ...o, posts: e.target.checked }))} /> วันโพสต์ (แจ้งเตือนก่อน 30 นาที)</label>
+              <label><input type="checkbox" checked={expOpt.shoots} onChange={(e) => setExpOpt((o) => ({ ...o, shoots: e.target.checked }))} /> วันถ่ายคลิป (เฉพาะคลิปจากแผน 16 คลิป)</label>
+              <label><input type="checkbox" checked={expOpt.includeDone} onChange={(e) => setExpOpt((o) => ({ ...o, includeDone: e.target.checked }))} /> รวมคลิปที่โพสต์แล้ว</label>
+            </div>
+            <button style={btnP} disabled={!expOpt.posts && !expOpt.shoots} onClick={exportIcs}>ดาวน์โหลดไฟล์ปฏิทิน</button>
+            {expMsg && <p role="status" style={{ margin: "8px 0 0", color: expMsg.startsWith("ไม่มี") ? RED : "#27500A" }}>{expMsg}</p>}
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: MUTED }}>iPhone: เปิดไฟล์แล้วกด “เพิ่มทั้งหมด” · Android: เปิดด้วย Google Calendar · นำเข้าซ้ำได้ ระบบจะอัปเดตรายการเดิม ไม่สร้างเบิ้ล</p>
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
           {DOW.map((d) => <div key={d} style={{ fontSize: 12, color: MUTED, textAlign: "center" }}>{d}</div>)}
           {cells.map((c, i) => {
