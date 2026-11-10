@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
     console.error("[POST /api/marketing/analyze]", err);
     if (err instanceof ClaudeError && err.kind === "websearch") return bad("บัญชี Anthropic ยังไม่เปิดใช้เครื่องมือค้นเว็บ (เปิดได้ที่ Console > Settings > Privacy หรือ Web search)");
     if (err instanceof ClaudeError && err.kind === "config") return bad(err.message, 500);
+    if (err instanceof ClaudeError) return bad(`เรียก AI ไม่สำเร็จ: ${err.message.slice(0, 200)}`, 502);
     return bad("วิเคราะห์ไม่สำเร็จ ลองกดใหม่อีกครั้ง");
   }
 }

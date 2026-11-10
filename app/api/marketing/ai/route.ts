@@ -116,7 +116,8 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
     if (!res.ok) {
       console.error("[POST /api/marketing/ai]", data);
-      return NextResponse.json({ error: "เรียก AI ไม่สำเร็จ ลองใหม่อีกครั้ง" }, { status: 502 });
+      const why: string = typeof data?.error?.message === "string" ? data.error.message.slice(0, 200) : `HTTP ${res.status}`;
+      return NextResponse.json({ error: `เรียก AI ไม่สำเร็จ: ${why}` }, { status: 502 });
     }
     const raw: string = (data.content ?? []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("");
     const json = extractJson(raw);
