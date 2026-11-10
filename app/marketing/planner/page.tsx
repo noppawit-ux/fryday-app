@@ -1,24 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { ImportPlan, Results, Survey } from "./results";
 
 /* ---------- วางแผนคอนเทนต์: ปฏิทิน · ไอเดีย · สคริปต์ ----------
    ใช้ข้อมูลชุดเดียวกับหน้า Marketing (ตารางแคมเปญใน Notion) */
 
 interface Campaign { id: string; title: string; contentType: string | null; channels: string[]; status: string; postDate: string | null; link: string | null; reach?: number; engagement?: number; salesIncrease?: number }
-interface Idea { title: string; format: string; channels: string[]; hook: string; why: string; effort: string }
+interface Idea { title: string; format: string; channels: string[]; pillar?: string; hook: string; why: string; effort: string }
 interface Shot { t: string; visual: string; onscreen: string; voice: string }
 interface Script { hook: string; shots: Shot[]; caption: string; hashtags: string[]; cta: string; props: string[]; tips: string[] }
 interface Draft { title: string; format: string; channel: string; notes: string; campaignId: string | null }
 
 const RED = "#C0200A", MUTED = "#73726c", LINE = "#e5e3db";
-const STATUS = ["ไอเดีย", "กำลังสร้าง", "รออนุมัติ", "โพสต์แล้ว", "วัดผล"];
+const STATUS = ["ไอเดีย", "ยังไม่ถ่าย", "ถ่ายแล้ว", "ตัดต่อแล้ว", "ตั้งเวลาแล้ว", "กำลังสร้าง", "รออนุมัติ", "โพสต์แล้ว", "วัดผล"];
 const STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
   ไอเดีย: { bg: "#F1EFE8", fg: "#5F5E5A" }, กำลังสร้าง: { bg: "#FAEEDA", fg: "#854F0B" }, รออนุมัติ: { bg: "#E6F1FB", fg: "#185FA5" },
   โพสต์แล้ว: { bg: "#EAF3DE", fg: "#27500A" }, วัดผล: { bg: "#EEEDFE", fg: "#3C3489" },
+  ยังไม่ถ่าย: { bg: "#F1EFE8", fg: "#5F5E5A" }, ถ่ายแล้ว: { bg: "#FAEEDA", fg: "#854F0B" }, ตัดต่อแล้ว: { bg: "#FBEAF0", fg: "#72243E" }, ตั้งเวลาแล้ว: { bg: "#E6F1FB", fg: "#185FA5" },
 };
+const PILLARS = ["ภาพอาหาร", "เบื้องหลังร้าน", "จุดต่างของร้าน", "คน/บรรยากาศ"];
 const FORMATS = ["พิกัดร้าน", "เมนู/ASMR", "เบื้องหลังครัว", "บอร์ดเกมในร้าน", "โปรโมชัน", "ถาม-ตอบ/โพล", "ตามเทรนด์", "รีวิวลูกค้า"];
-const CHANNELS = ["Facebook", "Instagram", "TikTok", "YouTube Shorts"];
+const CHANNELS = ["Facebook", "Instagram", "TikTok", "YouTube Shorts", "Instagram Reels", "Facebook Reels"];
 const DOW = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 const BRAND_KEY = "fryday-planner-brand-v1";
 const DEFAULT_BRAND = `Fryday ร้านไก่ทอด
@@ -60,7 +63,7 @@ function scriptText(d: Draft, sc: Script) {
 }
 
 export default function PlannerPage() {
-  const [tab, setTab] = useState<"cal" | "insight" | "ideas" | "script">("cal");
+  const [tab, setTab] = useState<"cal" | "insight" | "ideas" | "script" | "results" | "survey">("cal");
   const [theme, setTheme] = useState("");
   const [items, setItems] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,14 +95,17 @@ export default function PlannerPage() {
         <a href="/marketing/studio" style={{ ...btn, marginLeft: "auto", textDecoration: "none", color: "#1a1a18" }}>🎬 Studio ทำคลิป</a>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {tabBtn("cal", "ปฏิทิน")}{tabBtn("insight", "วิเคราะห์ข้อมูล")}{tabBtn("ideas", "คิดไอเดีย")}{tabBtn("script", "ออกแบบสคริปต์")}
+        {tabBtn("cal", "ปฏิทิน")}{tabBtn("insight", "วิเคราะห์ข้อมูล")}{tabBtn("ideas", "คิดไอเดีย")}{tabBtn("script", "ออกแบบสคริปต์")}{tabBtn("results", "บันทึกผล")}{tabBtn("survey", "ถามลูกค้า")}
       </div>
       {err && <p role="alert" style={{ color: RED, fontSize: 14 }}>❌ {err}</p>}
       {loading && <p style={{ color: MUTED, fontSize: 14 }}>กำลังโหลด…</p>}
 
+      {tab === "cal" && items.filter((c) => /^คลิป \d+:/.test(c.title)).length < 16 && <ImportPlan reload={load} shared={{ card, input, btn, btnP, lab, RED, MUTED, LINE, api }} />}
       {tab === "cal" && <Calendar items={items} reload={load} toScript={(c) => { setDraft({ title: c.title, format: "พิกัดร้าน", channel: "", notes: "", campaignId: c.id }); setTab("script"); }} />}
       {tab === "insight" && <Insights items={items} toIdeas={(t) => { setTheme(t); setTab("ideas"); }} />}
       {tab === "ideas" && <Ideas items={items} theme={theme} setTheme={setTheme} brand={brand} saveBrand={saveBrand} reload={load} toScript={(i, id) => { setDraft({ title: i.title, format: i.format, channel: i.channels[0] ?? "", notes: `ฮุกที่คิดไว้: ${i.hook}`, campaignId: id }); setTab("script"); }} />}
+      {tab === "results" && <Results reload={load} shared={{ card, input, btn, btnP, lab, RED, MUTED, LINE, api }} />}
+      {tab === "survey" && <Survey shared={{ card, input, btn, btnP, lab, RED, MUTED, LINE, api }} />}
       {tab === "script" && <ScriptDesigner brand={brand} draft={draft} setDraft={setDraft} reload={load} />}
     </main>
   );
@@ -248,6 +254,7 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
 function Ideas({ items, theme, setTheme, brand, saveBrand, reload, toScript }: { items: Campaign[]; theme: string; setTheme: (v: string) => void; brand: string; saveBrand: (v: string) => void; reload: () => void; toScript: (i: Idea, id: string | null) => void }) {
   const [channel, setChannel] = useState("");
   const [formats, setFormats] = useState<string[]>([]);
+  const [pillars, setPillars] = useState<string[]>([]);
   const [count, setCount] = useState(5);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -256,13 +263,13 @@ function Ideas({ items, theme, setTheme, brand, saveBrand, reload, toScript }: {
 
   const gen = async () => {
     setBusy(true); setErr(""); setSaved({});
-    const { ok, data } = await api<{ items: Idea[] }>("/api/marketing/ai", { method: "POST", body: JSON.stringify({ mode: "ideas", brand, channel, formats, count, theme, existing: items.map((c) => c.title) }) });
+    const { ok, data } = await api<{ items: Idea[] }>("/api/marketing/ai", { method: "POST", body: JSON.stringify({ mode: "ideas", brand, channel, formats, pillars, count, theme, existing: items.map((c) => c.title) }) });
     if (ok) setRes(data.items); else setErr(data.error ?? "สร้างไม่สำเร็จ");
     setBusy(false);
   };
   const save = async (i: Idea, idx: number): Promise<string | null> => {
     if (saved[idx]) return saved[idx];
-    const { ok, data } = await api<{ campaign: { id: string } }>("/api/marketing", { method: "POST", body: JSON.stringify({ title: i.title, contentType: typeOf(i.format), channels: i.channels, status: "ไอเดีย", notes: `รูปแบบ: ${i.format}\nฮุก: ${i.hook}\nทำไมน่าดู: ${i.why}` }) });
+    const { ok, data } = await api<{ campaign: { id: string } }>("/api/marketing", { method: "POST", body: JSON.stringify({ title: i.title, contentType: i.pillar || typeOf(i.format), channels: i.channels, status: "ไอเดีย", notes: `รูปแบบ: ${i.format}${i.pillar ? `\nเสาหลัก: ${i.pillar}` : ""}\nฮุก: ${i.hook}\nทำไมน่าดู: ${i.why}` }) });
     if (!ok) { setErr(data.error ?? "บันทึกไม่สำเร็จ"); return null; }
     setSaved((s) => ({ ...s, [idx]: data.campaign.id })); await reload();
     return data.campaign.id;
@@ -282,6 +289,10 @@ function Ideas({ items, theme, setTheme, brand, saveBrand, reload, toScript }: {
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {FORMATS.map((f) => { const on = formats.includes(f); return <button key={f} aria-pressed={on} onClick={() => setFormats((a) => (on ? a.filter((x) => x !== f) : [...a, f]))} style={{ ...btn, padding: "4px 10px", fontSize: 12, background: on ? "#FFF3EE" : "#fff", borderColor: on ? RED : LINE }}>{f}</button>; })}
         </div>
+        <label style={{ ...lab, marginTop: 10 }}>เสาหลัก 4 อันของร้าน (ไม่เลือก = ให้ AI จัดให้)</label>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {PILLARS.map((f) => { const on = pillars.includes(f); return <button key={f} aria-pressed={on} onClick={() => setPillars((a) => (on ? a.filter((x) => x !== f) : [...a, f]))} style={{ ...btn, padding: "4px 10px", fontSize: 12, background: on ? "#FFF3EE" : "#fff", borderColor: on ? RED : LINE }}>{f}</button>; })}
+        </div>
         <label style={{ ...lab, marginTop: 10 }}>จำนวนไอเดีย</label>
         <select style={input} value={count} onChange={(e) => setCount(Number(e.target.value))}>{[3, 5, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}</select>
         <button style={{ ...btnP, marginTop: 12, width: "100%", opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={gen}>{busy ? "กำลังคิด…" : "✨ คิดไอเดีย"}</button>
@@ -295,6 +306,7 @@ function Ideas({ items, theme, setTheme, brand, saveBrand, reload, toScript }: {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               <strong style={{ fontSize: 15 }}>{i.title}</strong>
               <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "#EEEDFE", color: "#3C3489" }}>{i.format}</span>
+              {i.pillar && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "#EAF3DE", color: "#27500A" }}>เสา: {i.pillar}</span>}
               {i.effort && <span style={{ fontSize: 11, color: MUTED }}>งาน{i.effort}</span>}
             </div>
             <p style={{ margin: "8px 0 2px", fontSize: 13 }}><b>ฮุก:</b> {i.hook}</p>

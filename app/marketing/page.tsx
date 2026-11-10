@@ -26,9 +26,9 @@ interface Summary {
   total: number;
 }
 
-const STATUS_LIST = ["ไอเดีย", "กำลังสร้าง", "รออนุมัติ", "โพสต์แล้ว", "วัดผล"];
+const STATUS_LIST = ["ไอเดีย", "ยังไม่ถ่าย", "ถ่ายแล้ว", "ตัดต่อแล้ว", "ตั้งเวลาแล้ว", "กำลังสร้าง", "รออนุมัติ", "โพสต์แล้ว", "วัดผล"];
 const CONTENT_TYPES = ["รูปภาพ", "Reel/Video", "โปรโมชัน", "Story", "Giveaway"];
-const CHANNELS = ["Facebook", "Instagram", "TikTok", "YouTube Shorts", "Line OA", "Shopee Food", "GrabFood"];
+const CHANNELS = ["Facebook", "Instagram", "TikTok", "YouTube Shorts", "Instagram Reels", "Facebook Reels", "Line OA", "Shopee Food", "GrabFood"];
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
   ไอเดีย:      { bg: "#F1EFE8", color: "#5F5E5A", border: "#D3D1C7" },
@@ -36,6 +36,10 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }
   รออนุมัติ:   { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
   โพสต์แล้ว:  { bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" },
   วัดผล:       { bg: "#EEEDFE", color: "#3C3489", border: "#CECBF6" },
+  ยังไม่ถ่าย:   { bg: "#F1EFE8", color: "#5F5E5A", border: "#D3D1C7" },
+  ถ่ายแล้ว:    { bg: "#FAEEDA", color: "#854F0B", border: "#FAC775" },
+  ตัดต่อแล้ว:   { bg: "#FBEAF0", color: "#72243E", border: "#F4C0D1" },
+  ตั้งเวลาแล้ว: { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
 };
 
 const CONTENT_ICON: Record<string, string> = {

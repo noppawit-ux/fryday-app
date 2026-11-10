@@ -8,7 +8,8 @@ export const maxDuration = 60;
 const MODEL = process.env.MARKETING_AI_MODEL ?? "claude-sonnet-4-6";
 
 const FORMATS = ["พิกัดร้าน", "เมนู/ASMR", "เบื้องหลังครัว", "บอร์ดเกมในร้าน", "โปรโมชัน", "ถาม-ตอบ/โพล", "ตามเทรนด์", "รีวิวลูกค้า"] as const;
-const CHANNELS = ["Facebook", "Instagram", "TikTok", "YouTube Shorts"] as const;
+const CHANNELS = ["Facebook", "Instagram", "TikTok", "YouTube Shorts", "Instagram Reels", "Facebook Reels"] as const;
+const PILLARS = ["ภาพอาหาร", "เบื้องหลังร้าน", "จุดต่างของร้าน", "คน/บรรยากาศ"] as const;
 
 const BASE_RULES = `คุณเป็นนักวางแผนคอนเทนต์โซเชียลของร้านอาหารขนาดเล็กในประเทศไทย
 ผู้ใช้ทำคอนเทนต์คนเดียว ใช้เวลาราว 3-8 ชั่วโมงต่อสัปดาห์ ถ่ายด้วยมือถือ งบ 0 บาท เป้าหมายคือให้คนรู้จักร้าน (awareness)
@@ -19,7 +20,7 @@ const BASE_RULES = `คุณเป็นนักวางแผนคอนเ
 - ภาษาไทยที่คนพูดจริง กระชับ ข้อความบนจอแต่ละบรรทัดไม่เกิน 8 คำ
 - ตอบเป็น JSON ล้วน ไม่มีข้อความนอก JSON ไม่มี markdown`;
 
-interface Ideas { mode: "ideas"; brand: string; channel: string; formats: string[]; count: number; theme: string; existing: string[] }
+interface Ideas { mode: "ideas"; brand: string; channel: string; pillars: string[]; formats: string[]; count: number; theme: string; existing: string[] }
 interface Script { mode: "script"; brand: string; title: string; format: string; duration: number; channel: string; notes: string }
 
 const s = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : "");
@@ -32,6 +33,7 @@ function parse(body: unknown): Ideas | Script | null {
       mode: "ideas",
       brand: s(b.brand, 1500),
       channel: s(b.channel, 30),
+      pillars: Array.isArray(b.pillars) ? b.pillars.map((x) => s(x, 30)).filter((x) => (PILLARS as readonly string[]).includes(x)) : [],
       formats,
       count: Math.min(10, Math.max(1, Number(b.count) || 5)),
       theme: s(b.theme, 1800),
@@ -58,7 +60,7 @@ function prompts(p: Ideas | Script): { system: string; user: string } {
     return {
       system: `${BASE_RULES}
 ให้คิดไอเดียคอนเทนต์ใหม่ ตอบเป็น JSON array ของ object รูปแบบ:
-{"title":"ชื่อโพสต์สั้น","format":"หนึ่งใน ${FORMATS.join(" | ")}","channels":["จาก ${CHANNELS.join(" | ")}"],"hook":"ประโยคเปิด 3 วินาทีแรก","why":"เหตุผลสั้นๆ ว่าทำไมคนจะดูหรือแชร์","effort":"ง่าย|กลาง|ยาก (เวลาถ่ายและตัดต่อ)"}
+{"title":"ชื่อโพสต์สั้น","format":"หนึ่งใน ${FORMATS.join(" | ")}","channels":["จาก ${CHANNELS.join(" | ")}"],"hook":"ประโยคเปิด 3 วินาทีแรก","why":"เหตุผลสั้นๆ ว่าทำไมคนจะดูหรือแชร์","pillar":"หนึ่งใน ${PILLARS.join(" | ")}","effort":"ง่าย|กลาง|ยาก (เวลาถ่ายและตัดต่อ)"}
 ไอเดียต้องต่างกันจริง ไม่ซ้ำกับรายการที่มีอยู่`,
       user: [
         `ข้อมูลร้าน:\n${p.brand || "(ไม่ได้ระบุ)"}`,
@@ -66,6 +68,7 @@ function prompts(p: Ideas | Script): { system: string; user: string } {
         `รูปแบบที่ต้องการ: ${p.formats.length ? p.formats.join(", ") : "ผสมหลายรูปแบบ"}`,
         p.theme ? `ธีม/เทรนด์/เหตุการณ์ที่ผู้ใช้ให้มา:\n${p.theme}` : "",
         p.existing.length ? `ไอเดียที่มีอยู่แล้ว (อย่าซ้ำ):\n- ${p.existing.join("\n- ")}` : "",
+        p.pillars.length ? `เสาหลักที่ต้องการ: ${p.pillars.join(", ")} (ร้านใช้ 4 เสาหลัก: ${PILLARS.join(", ")} ทุกไอเดียต้องระบุ pillar)` : `ร้านใช้ 4 เสาหลัก: ${PILLARS.join(", ")} ทุกไอเดียต้องระบุ pillar`,
         `จำนวน: ${p.count} ไอเดีย`,
       ].filter(Boolean).join("\n\n"),
     };
@@ -123,6 +126,7 @@ export async function POST(req: NextRequest) {
         title: s(i.title, 120),
         format: (FORMATS as readonly string[]).includes(s(i.format, 30)) ? s(i.format, 30) : "ตามเทรนด์",
         channels: (Array.isArray(i.channels) ? i.channels : []).map((c) => s(c, 20)).filter((c) => (CHANNELS as readonly string[]).includes(c)),
+        pillar: (PILLARS as readonly string[]).includes(s(i.pillar, 30)) ? s(i.pillar, 30) : "",
         hook: s(i.hook, 200), why: s(i.why, 300), effort: s(i.effort, 10),
       })).filter((i) => i.title);
       return NextResponse.json({ items });

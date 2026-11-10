@@ -4,6 +4,7 @@ import { sb } from "@/lib/roadmap-db";
 import type { Snapshot } from "@/lib/roadmap-sales";
 import { salesDigest } from "@/lib/sales-digest";
 import { claude, ClaudeError, extractJson, verifiedUrls } from "@/lib/anthropic";
+import { loadAll, summarize } from "@/lib/content-stats";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -43,6 +44,16 @@ const TRENDS_SYSTEM = (today: string) => `คุณเป็นนักวิ�
 รูปแบบ JSON:
 {"summary":"สรุป 2-3 ประโยค","trends":[{"name":"ชื่อเทรนด์","what":"คืออะไร","evidence":"สิ่งที่แหล่งบอก และอายุ/ประเทศของแหล่ง","confidence":"สูง|กลาง|ต่ำ","useForFryday":"ทำกับ Fryday อย่างไรภายใน 1 วันถ่าย","sourceUrls":["ลิงก์จากผลค้นหา"]}],"formats":[{"format":"รูปแบบวิดีโอ","note":"ทำไมได้ผลตามแหล่ง","sourceUrls":["ลิงก์"]}],"cautions":["ข้อควรระวัง เช่น ลิขสิทธิ์เสียง คำโฆษณา"],"gaps":["สิ่งที่หาไม่เจอ"]}
 trends 3-6 ข้อ formats 2-4 ข้อ`;
+
+const CONTENT_SYSTEM = `คุณเป็นที่ปรึกษาคอนเทนต์ของร้านไก่ทอด Fryday (ผู้ใช้ทำคนเดียว ~5 ชม./สัปดาห์ ถ่ายมือถือ เป้าหมายคือให้คนรู้จักร้าน)
+อ่านผลจริงของคลิปที่โพสต์ 4 ช่อง และคำตอบลูกค้าหน้าร้าน แล้วร่างข้อสรุปให้เจ้าของร้านเลือก "ทำต่อ / เลิก / ลองใหม่" อย่างละ 1 ข้อ
+กฎเหล็ก:
+- ใช้เฉพาะตัวเลขที่ให้มา ห้ามแต่งหรือเดา ทุกข้อต้องอ้างตัวเลขหรือชื่อคลิป/เสาหลัก/ช่องจากข้อมูล
+- จำนวนคลิปที่มีผลน้อย (ต่ำกว่า 8 คลิป) ให้บอกว่าเป็นแนวโน้มเบื้องต้น ห้ามฟันธง; ห้ามสรุปว่าคลิปทำให้ยอดขายเพิ่ม
+- ถ้าข้อมูลยังว่างหรือไม่พอ ให้ตอบ summary ว่าข้อมูลยังไม่พอ และบอกใน gaps ว่าต้องกรอกอะไรเพิ่ม โดยปล่อย keep/drop/tryNew เป็นสตริงว่าง
+- ตัวชี้วัดหลัก: Views, Shares+Saves, เข้าโปรไฟล์+ผู้ติดตามใหม่, สัดส่วนลูกค้าที่บอกรู้จักจากคลิป (ตัวที่เชื่อถือสุดสำหรับ awareness)
+- ภาษาไทยกระชับ ตอบเป็น JSON ล้วน ไม่มี markdown
+รูปแบบ: {"summary":"2-3 ประโยค","keep":"ทำต่อ 1 ข้อ พร้อมหลักฐาน","drop":"เลิก 1 ข้อ พร้อมหลักฐาน","tryNew":"ลองใหม่ 1 ข้อ ที่ถ่ายได้ภายใน 1 วัน","gaps":["ข้อมูลที่ขาด"]}`;
 
 function bad(msg: string, status = 502) { return NextResponse.json({ error: msg }, { status }); }
 
@@ -92,6 +103,23 @@ export async function POST(req: NextRequest) {
         result: { summary: s(o.summary, 600), trends, formats, cautions: arr(o.cautions, 6, 250), gaps: arr(o.gaps, 6, 250) },
       });
     }
+    if (mode === "content") {
+      const { clips, survey } = await loadAll();
+      const sum = summarize(clips, survey);
+      const withData = clips.filter((c) => Object.keys(c.results).length);
+      const f = (v: number | null) => (v === null ? "-" : (v * 100).toFixed(1) + "%");
+      const lines = [
+        `คลิปที่มีผลบันทึกแล้ว ${withData.length} จาก ${clips.length} คลิป`,
+        "รายสัปดาห์:", ...sum.weekly.map((w) => `- สัปดาห์ ${w.week} (${w.theme}): views ${w.views}, shares+saves ${w.shareSave} (${f(w.shareSavePct)}), เข้าโปรไฟล์ ${w.profile}, ผู้ติดตามใหม่ ${w.followers}, ลูกค้าตอบ ${w.asked} คน รู้จักจากคลิป ${w.fromClip} (${f(w.fromClipPct)})`),
+        "ตามเสาหลัก:", ...sum.pillars.map((p) => `- ${p.pillar}: โพสต์ ${p.posted} คลิป views รวม ${p.views} เฉลี่ย ${p.avgViews === null ? "-" : Math.round(p.avgViews)} share+save ${f(p.shareSavePct)}`),
+        "ตามช่อง:", ...sum.channels.map((c) => `- ${c.channel}: views ${c.views}, ผู้ติดตามใหม่ ${c.followers}, share+save ${f(c.shareSavePct)}`),
+        "รายคลิป:", ...withData.slice(0, 20).map((c) => `- ${c.title} [${c.pillar}] ` + Object.entries(c.results).map(([ch, r]) => `${ch}: views ${r.views ?? "-"}, share ${r.shares ?? "-"}, save ${r.saves ?? "-"}`).join(" | ")),
+      ].join("\n");
+      const { text } = await claude({ system: CONTENT_SYSTEM, user: lines, maxTokens: 1500 });
+      const o = (extractJson(text) ?? {}) as Record<string, unknown>;
+      return NextResponse.json({ clipsUsed: withData.length, result: { summary: s(o.summary, 600), keep: s(o.keep, 400), drop: s(o.drop, 400), tryNew: s(o.tryNew, 400), gaps: arr(o.gaps, 5, 250) } });
+    }
+
     return bad("ไม่รู้จักโหมดนี้", 400);
   } catch (err) {
     console.error("[POST /api/marketing/analyze]", err);
