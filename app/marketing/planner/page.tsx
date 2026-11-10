@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ImportPlan, Results, Survey } from "./results";
+import "./planner.css";
 
 /* ---------- วางแผนคอนเทนต์: ปฏิทิน · ไอเดีย · สคริปต์ ----------
    ใช้ข้อมูลชุดเดียวกับหน้า Marketing (ตารางแคมเปญใน Notion) */
@@ -12,7 +13,7 @@ interface Shot { t: string; visual: string; onscreen: string; voice: string }
 interface Script { hook: string; shots: Shot[]; caption: string; hashtags: string[]; cta: string; props: string[]; tips: string[] }
 interface Draft { title: string; format: string; channel: string; notes: string; campaignId: string | null }
 
-const RED = "#C0200A", MUTED = "#73726c", LINE = "#e5e3db";
+const RED = "#C0200A", MUTED = "#73726c", LINE = "#E7E2D6";
 const STATUS = ["ไอเดีย", "ยังไม่ถ่าย", "ถ่ายแล้ว", "ตัดต่อแล้ว", "ตั้งเวลาแล้ว", "กำลังสร้าง", "รออนุมัติ", "โพสต์แล้ว", "วัดผล"];
 const STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
   ไอเดีย: { bg: "#F1EFE8", fg: "#5F5E5A" }, กำลังสร้าง: { bg: "#FAEEDA", fg: "#854F0B" }, รออนุมัติ: { bg: "#E6F1FB", fg: "#185FA5" },
@@ -30,7 +31,7 @@ const DEFAULT_BRAND = `Fryday ร้านไก่ทอด
 ปิดทุกวันพฤหัสบดี (เริ่ม 12 พ.ย. 2569)
 ช่องทางที่มี: Facebook Page, Instagram Reels, TikTok, YouTube Shorts`;
 
-const card: CSSProperties = { background: "#fff", border: `0.5px solid ${LINE}`, borderRadius: 12, padding: 16 };
+const card: CSSProperties = { background: "#fff", border: `1px solid ${LINE}`, borderRadius: 14, padding: 16 };
 const input: CSSProperties = { font: "inherit", fontSize: 14, padding: "8px 10px", border: `1px solid ${LINE}`, borderRadius: 8, width: "100%", background: "#fff", boxSizing: "border-box" };
 const btn: CSSProperties = { font: "inherit", fontSize: 13, padding: "7px 12px", border: `1px solid ${LINE}`, borderRadius: 8, background: "#fff", cursor: "pointer" };
 const btnP: CSSProperties = { ...btn, background: RED, color: "#fff", borderColor: RED, fontWeight: 600 };
@@ -84,19 +85,26 @@ export default function PlannerPage() {
   const saveBrand = (v: string) => { setBrand(v); try { localStorage.setItem(BRAND_KEY, v); } catch { /* ไม่เป็นไร */ } };
 
   const tabBtn = (k: typeof tab, label: string) => (
-    <button onClick={() => setTab(k)} style={{ ...btn, background: tab === k ? RED : "#fff", color: tab === k ? "#fff" : "#1a1a18", borderColor: tab === k ? RED : LINE, fontWeight: tab === k ? 600 : 400 }}>{label}</button>
+    <button key={k} onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined}>{label}</button>
   );
 
   return (
-    <main style={{ padding: "24px 20px", maxWidth: 1100, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <a href="/marketing" style={{ fontSize: 13, color: MUTED, textDecoration: "none" }}>← Marketing</a>
-        <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>🗓 วางแผนคอนเทนต์</h1>
-        <a href="/marketing/studio" style={{ ...btn, marginLeft: "auto", textDecoration: "none", color: "#1a1a18" }}>🎬 Studio ทำคลิป</a>
+    <main className="pl" style={{ padding: "20px 20px 40px", maxWidth: 1100, margin: "0 auto" }}>
+      <div className="pl-head">
+        <div>
+          <a href="/marketing" className="pl-back">← กลับหน้า Marketing</a>
+          <h1>วางแผนคอนเทนต์</h1>
+          <p>แผน 2–29 พ.ย. · ถ่ายสัปดาห์ละครั้ง ลง 4 ช่อง แล้วดูผลทุกวันจันทร์</p>
+        </div>
+        <a href="/marketing/studio" style={{ ...btn, marginLeft: "auto", textDecoration: "none", color: "#2a2118", fontWeight: 600 }}>🎬 Studio ทำคลิป</a>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {tabBtn("cal", "ปฏิทิน")}{tabBtn("insight", "วิเคราะห์ข้อมูล")}{tabBtn("ideas", "คิดไอเดีย")}{tabBtn("script", "ออกแบบสคริปต์")}{tabBtn("results", "บันทึกผล")}{tabBtn("survey", "ถามลูกค้า")}
-      </div>
+
+      <Pipeline items={items} />
+
+      <nav className="pl-nav" aria-label="เมนูวางแผนคอนเทนต์">
+        <div className="pl-group"><span>วางแผน</span><div className="pl-seg">{tabBtn("cal", "ปฏิทิน")}{tabBtn("ideas", "คิดไอเดีย")}{tabBtn("script", "ออกแบบสคริปต์")}</div></div>
+        <div className="pl-group"><span>วัดผล</span><div className="pl-seg">{tabBtn("results", "บันทึกผล")}{tabBtn("survey", "ถามลูกค้า")}{tabBtn("insight", "วิเคราะห์ข้อมูล")}</div></div>
+      </nav>
       {err && <p role="alert" style={{ color: RED, fontSize: 14 }}>❌ {err}</p>}
       {loading && <p style={{ color: MUTED, fontSize: 14 }}>กำลังโหลด…</p>}
 
@@ -108,6 +116,38 @@ export default function PlannerPage() {
       {tab === "survey" && <Survey shared={{ card, input, btn, btnP, lab, RED, MUTED, LINE, api }} />}
       {tab === "script" && <ScriptDesigner brand={brand} draft={draft} setDraft={setDraft} reload={load} />}
     </main>
+  );
+}
+
+
+/* ---------------- สายการผลิตคลิป: แต่ละคลิปค้างอยู่ขั้นไหน ---------------- */
+const STAGES = ["ยังไม่ถ่าย", "ถ่ายแล้ว", "ตัดต่อแล้ว", "ตั้งเวลาแล้ว", "โพสต์แล้ว"];
+const STAGE_BAR: Record<string, string> = { ยังไม่ถ่าย: "#D3CFC2", ถ่ายแล้ว: "#E0A526", ตัดต่อแล้ว: "#D4537E", ตั้งเวลาแล้ว: "#378ADD", โพสต์แล้ว: "#3B8B2E" };
+
+function Pipeline({ items }: { items: Campaign[] }) {
+  const counts = STAGES.map((s) => items.filter((c) => c.status === s).length);
+  const total = counts.reduce((a, b) => a + b, 0);
+  const ideas = items.filter((c) => c.status === "ไอเดีย").length;
+  const t0 = todayStr();
+  const nextShoot = items.filter((c) => c.status === "ยังไม่ถ่าย" && c.postDate).sort((a, b) => a.postDate!.localeCompare(b.postDate!))[0];
+  const todayPosts = items.filter((c) => c.postDate?.slice(0, 10) === t0 && c.status !== "โพสต์แล้ว" && c.status !== "วัดผล").length;
+  return (
+    <section className="pl-line" aria-label="สายการผลิตคลิป">
+      <div className="pl-line-top">
+        <strong>สายการผลิตคลิป</strong>
+        <span>{total ? `${total} คลิปในสายการผลิต` : "ยังไม่มีคลิปในสายการผลิต"}{ideas ? ` · ไอเดียที่รอคัดอีก ${ideas}` : ""}</span>
+      </div>
+      <div className={`pl-bar${total ? "" : " empty"}`} role="img" aria-label={STAGES.map((s, i) => `${s} ${counts[i]}`).join(" ")}>
+        {total ? STAGES.map((s, i) => counts[i] > 0 && <i key={s} style={{ flexGrow: counts[i], background: STAGE_BAR[s] }} />) : STAGES.map((s) => <i key={s} />)}
+      </div>
+      <div className="pl-stages">
+        {STAGES.map((s, i) => <div key={s} className="pl-stage"><b>{counts[i]}</b>{s}</div>)}
+      </div>
+      <p className="pl-next">
+        {todayPosts > 0 ? <>📣 วันนี้ต้องโพสต์ <b>{todayPosts}</b> คลิป · </> : null}
+        {nextShoot ? <>คลิปถัดไปที่ต้องถ่าย: <b>{nextShoot.title}</b> (โพสต์ {thDate(nextShoot.postDate!.slice(0, 10))})</> : total ? "ไม่มีคลิปค้างถ่าย 🎉" : "เปิดแท็บปฏิทินแล้วกด “นำเข้าแผน 16 คลิป” เพื่อเริ่ม"}
+      </p>
+    </section>
   );
 }
 
@@ -185,9 +225,9 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
             const list = byDate.get(c) ?? [];
             const isSel = c === sel, isToday = c === t0;
             return (
-              <button key={c} onClick={() => setSel(c)} style={{ minHeight: 78, textAlign: "left", padding: 4, borderRadius: 8, cursor: "pointer", font: "inherit", background: isSel ? "#FFF3EE" : "#fff", border: `1px solid ${isSel ? RED : LINE}`, overflow: "hidden" }}>
-                <div style={{ fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? RED : "#1a1a18" }}>{Number(c.slice(8))}</div>
-                {list.slice(0, 2).map((x) => { const col = STATUS_COLOR[x.status] ?? STATUS_COLOR["ไอเดีย"]; return <div key={x.id} style={{ fontSize: 10, background: col.bg, color: col.fg, borderRadius: 4, padding: "1px 4px", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x.title}</div>; })}
+              <button key={c} onClick={() => setSel(c)} aria-pressed={isSel} aria-label={`${thDate(c)} ${list.length} โพสต์`} className={`pl-day${isSel ? " sel" : ""}${[0, 6].includes(dowOf(c)) ? " weekend" : ""}`}>
+                <span className={`pl-num${isToday ? " today" : ""}`}>{Number(c.slice(8))}</span>
+                {list.slice(0, 2).map((x) => { const col = STATUS_COLOR[x.status] ?? STATUS_COLOR["ไอเดีย"]; return <div key={x.id} style={{ fontSize: 10, background: col.bg, color: col.fg, borderRadius: 4, padding: "1px 4px", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x.title.replace(/^คลิป (\d+):.*/, "#$1")}</div>; })}
                 {list.length > 2 && <div style={{ fontSize: 10, color: MUTED }}>+{list.length - 2}</div>}
               </button>
             );
