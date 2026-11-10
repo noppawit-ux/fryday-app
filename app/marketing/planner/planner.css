@@ -39,6 +39,7 @@
 .pl-day.weekend { background: var(--soft); }
 .pl-day.sel { border-color: var(--red); background: #FFF3EE; box-shadow: 0 0 0 1px var(--red) inset; }
 .pl-num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 99px; font-size: 12px; }
+.pl-count { display: none; font-size: 10px; color: var(--muted); margin-left: 4px; }
 .pl-num.today { background: var(--red); color: #fff; font-weight: 700; }
 
 @media (max-width: 640px) {
@@ -48,3 +49,29 @@
   .pl-day { min-height: 56px; padding: 3px; }
 }
 @media (prefers-reduced-motion: reduce) { .pl *, .pl *::before { transition: none !important; } }
+
+/* แท็บปฏิทินบนจอคอม: จัดทั้งหน้าให้พอดีความสูงจอ ไม่ต้องเลื่อนหน้า (ช่องวันยืดตามพื้นที่ ส่วนขวาเลื่อนในตัวเอง) */
+@media (min-width: 900px) and (min-height: 620px) {
+  .pl.fit { height: calc(100dvh - 56px); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; padding-top: 12px !important; padding-bottom: 14px !important; }
+  .pl.fit > * { flex-shrink: 0; }
+  .pl.fit .pl-head { margin-bottom: 8px; align-items: center; }
+  .pl.fit .pl-head h1 { font-size: 20px; margin: 0; }
+  .pl.fit .pl-head p { display: none; }
+  .pl.fit .pl-line { padding: 8px 14px; margin-bottom: 6px; display: grid; grid-template-columns: auto 1fr; column-gap: 16px; row-gap: 4px; align-items: center; }
+  .pl.fit .pl-line-top { margin: 0; grid-column: 1; grid-row: 1; flex-direction: column; gap: 0; align-items: flex-start; }
+  .pl.fit .pl-bar { grid-column: 2; grid-row: 1; height: 10px; }
+  .pl.fit .pl-stages { grid-column: 2; grid-row: 2; margin: 0; }
+  .pl.fit .pl-stage { font-size: 11px; display: flex; gap: 6px; align-items: baseline; }
+  .pl.fit .pl-stage b { font-size: 14px; display: inline; }
+  .pl.fit .pl-next { grid-column: 1 / -1; margin: 2px 0 0; padding-top: 6px; font-size: 12px; }
+  .pl.fit .pl-nav { padding: 2px 0 8px; margin-bottom: 0; position: static; background: none; backdrop-filter: none; }
+  .pl.fit .pl-cal { flex: 1 1 0 !important; min-height: 0; flex-wrap: nowrap !important; align-items: stretch !important; }
+  .pl.fit .pl-cal-main { display: flex; flex-direction: column; min-height: 0; flex: 2 1 0 !important; padding: 12px 14px !important; }
+  .pl.fit .pl-cal-grid { flex: 1; min-height: 0; grid-template-rows: auto repeat(var(--rows, 6), minmax(0, 1fr)); }
+  .pl.fit .pl-day { min-height: 0 !important; padding: 3px 4px; }
+  .pl.fit .pl-cal-side { flex: 1 1 0 !important; min-width: 280px; max-width: 420px; overflow-y: auto; padding-right: 2px; }
+}
+@media (min-width: 900px) and (min-height: 620px) and (max-height: 820px) {
+  .pl.fit .pl-chip:nth-of-type(n+2), .pl.fit .pl-more { display: none; }
+  .pl.fit .pl-count { display: inline; }
+}

@@ -90,7 +90,7 @@ export default function PlannerPage() {
   );
 
   return (
-    <main className="pl" style={{ padding: "20px 20px 40px", maxWidth: 1100, margin: "0 auto" }}>
+    <main className={`pl${tab === "cal" ? " fit" : ""}`} style={{ padding: "20px 20px 40px", maxWidth: 1100, margin: "0 auto" }}>
       <div className="pl-head">
         <div>
           <a href="/marketing" className="pl-back">← กลับหน้า Marketing</a>
@@ -220,8 +220,8 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
   const dayItems = byDate.get(sel) ?? [];
 
   return (
-    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-      <section style={{ ...card, flex: "2 1 520px", minWidth: 0 }}>
+    <div className="pl-cal" style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+      <section className="pl-cal-main" style={{ ...card, flex: "2 1 520px", minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <button style={btn} onClick={() => go(-1)} aria-label="เดือนก่อน">‹</button>
           <strong style={{ flex: 1, textAlign: "center" }}>{title}</strong>
@@ -241,7 +241,7 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
             <p style={{ margin: "8px 0 0", fontSize: 12, color: MUTED }}>iPhone: เปิดไฟล์แล้วกด “เพิ่มทั้งหมด” · Android: เปิดด้วย Google Calendar · นำเข้าซ้ำได้ ระบบจะอัปเดตรายการเดิม ไม่สร้างเบิ้ล</p>
           </div>
         )}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+        <div className="pl-cal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, ["--rows" as string]: cells.length / 7 }}>
           {DOW.map((d) => <div key={d} style={{ fontSize: 12, color: MUTED, textAlign: "center" }}>{d}</div>)}
           {cells.map((c, i) => {
             if (!c) return <div key={i} />;
@@ -250,15 +250,16 @@ function Calendar({ items, reload, toScript }: { items: Campaign[]; reload: () =
             return (
               <button key={c} onClick={() => setSel(c)} aria-pressed={isSel} aria-label={`${thDate(c)} ${list.length} โพสต์`} className={`pl-day${isSel ? " sel" : ""}${[0, 6].includes(dowOf(c)) ? " weekend" : ""}`}>
                 <span className={`pl-num${isToday ? " today" : ""}`}>{Number(c.slice(8))}</span>
-                {list.slice(0, 2).map((x) => { const col = STATUS_COLOR[x.status] ?? STATUS_COLOR["ไอเดีย"]; return <div key={x.id} style={{ fontSize: 10, background: col.bg, color: col.fg, borderRadius: 4, padding: "1px 4px", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x.title.replace(/^คลิป (\d+):.*/, "#$1")}</div>; })}
-                {list.length > 2 && <div style={{ fontSize: 10, color: MUTED }}>+{list.length - 2}</div>}
+                {list.length > 1 && <span className="pl-count" aria-hidden="true">{list.length} โพสต์</span>}
+                {list.slice(0, 2).map((x) => { const col = STATUS_COLOR[x.status] ?? STATUS_COLOR["ไอเดีย"]; return <div key={x.id} className="pl-chip" style={{ fontSize: 10, background: col.bg, color: col.fg, borderRadius: 4, padding: "1px 4px", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x.title.replace(/^คลิป (\d+):.*/, "#$1")}</div>; })}
+                {list.length > 2 && <div className="pl-more" style={{ fontSize: 10, color: MUTED }}>+{list.length - 2}</div>}
               </button>
             );
           })}
         </div>
       </section>
 
-      <div style={{ flex: "1 1 300px", display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
+      <div className="pl-cal-side" style={{ flex: "1 1 300px", display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
         <section style={card}>
           <h2 style={{ margin: "0 0 8px", fontSize: 15 }}>{thDate(sel)}</h2>
           {dayItems.length === 0 && <p style={{ margin: "0 0 8px", fontSize: 13, color: MUTED }}>ยังไม่มีโพสต์ในวันนี้</p>}
