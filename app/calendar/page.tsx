@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { buildIcs, downloadIcs } from "../marketing/planner/ics";
 
 interface CalendarItem {
   id: string;
@@ -12,6 +13,8 @@ interface CalendarItem {
   assignee?: string | null;
   category?: string;
   channel?: string;
+  channels?: string[];
+  contentType?: string | null;
   note?: string | null;
   deadline?: string | null;
 }
@@ -29,7 +32,8 @@ const PRIORITY_COLOR: Record<string, string> = {
 const DAY_TH = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 const MONTH_TH = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
-function formatDateKey(d: Date): string { return d.toISOString().slice(0, 10); }
+// ใช้วันที่ตามเวลาเครื่อง (ไม่ใช่ UTC) ไม่งั้นช่องวันจะเลื่อนผิดไป 1 วันในประเทศไทย
+function formatDateKey(d: Date): string { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function formatDateTH(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
@@ -67,7 +71,7 @@ async function fetchMarketing(): Promise<CalendarItem[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (data.campaigns ?? []).filter((c: any) => c.postDate).map((c: any) => ({
       id: c.id, title: c.title, date: c.postDate, type: "marketing" as const,
-      status: c.status, assignee: c.assignee, channel: c.channels?.[0] ?? null,
+      status: c.status, assignee: c.assignee, channel: c.channels?.[0] ?? null, channels: c.channels ?? [], contentType: c.contentType ?? null,
     }));
   } catch { return []; }
 }
@@ -75,7 +79,7 @@ async function fetchMarketing(): Promise<CalendarItem[]> {
 // ---- Detail Card ----
 function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void }) {
   const s = TYPE_STYLE[item.type];
-  const isOverdue = item.date < new Date().toISOString().slice(0, 10);
+  const isOverdue = item.date < formatDateKey(new Date());
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "flex-end" }}
@@ -185,38 +189,23 @@ function DayCell({ date, items, isCurrentMonth, isToday, isSelected, onClick }: 
   const MAX_SHOW = 2;
   const visible  = items.slice(0, MAX_SHOW);
   const overflow = items.length - MAX_SHOW;
+  const weekend = date.getDay() === 0 || date.getDay() === 6;
 
   return (
-    <div onClick={onClick} style={{
-      minHeight: 64, padding: "4px 3px 3px", cursor: "pointer",
-      background: isSelected ? "#FEE9E7" : isToday ? "#FFF8F7" : "#fff",
-      border: `0.5px solid ${isSelected ? "#F5C0B8" : isToday ? "#FAC775" : "#e5e3db"}`,
-      borderRadius: 8, opacity: isCurrentMonth ? 1 : 0.35,
-    }}>
-      <div style={{
-        width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center",
-        justifyContent: "center", fontSize: 11, fontWeight: isToday ? 700 : 400, marginBottom: 3,
-        background: isToday ? "#C0200A" : "transparent",
-        color: isToday ? "#fff" : isCurrentMonth ? "#1a1a18" : "#bbb",
-      }}>
-        {date.getDate()}
-      </div>
+    <button type="button" onClick={onClick} aria-pressed={isSelected} aria-label={`${date.getDate()} ${MONTH_TH[date.getMonth()]} ${items.length} รายการ`}
+      className={`cal-cell${isSelected ? " sel" : ""}${weekend ? " weekend" : ""}${isCurrentMonth ? "" : " other"}`}>
+      <span className={`cal-num${isToday ? " today" : ""}`}>{date.getDate()}</span>
+      {items.length > 1 && <span className="cal-count" aria-hidden="true">{items.length} รายการ</span>}
       {visible.map((item) => {
         const s = TYPE_STYLE[item.type];
         return (
-          <div key={item.id} style={{
-            fontSize: 9, padding: "1px 4px", borderRadius: 3, marginBottom: 2,
-            background: s.bg, color: s.color, overflow: "hidden",
-            textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.5,
-          }}>
-            {s.icon} {item.title}
+          <div key={item.id} className="cal-chip" style={{ background: s.bg, color: s.color }}>
+            {s.icon} {item.title.replace(/^คลิป (\d+):.*/, "คลิป $1")}
           </div>
         );
       })}
-      {overflow > 0 && (
-        <div style={{ fontSize: 9, color: "#C0200A", paddingLeft: 3, fontWeight: 500 }}>+{overflow}</div>
-      )}
-    </div>
+      {overflow > 0 && <div className="cal-more">+{overflow}</div>}
+    </button>
   );
 }
 
@@ -289,6 +278,9 @@ export default function CalendarPage() {
   const [selected, setSelected] = useState<string | null>(formatDateKey(today));
   const [detailItem, setDetailItem] = useState<CalendarItem | null>(null);
   const [filter, setFilter]   = useState<"all" | "task" | "marketing">("all");
+  const [exp, setExp] = useState(false);
+  const [expOpt, setExpOpt] = useState({ tasks: true, posts: true, shoots: true });
+  const [expMsg, setExpMsg] = useState("");
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -297,7 +289,7 @@ export default function CalendarPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { queueMicrotask(fetchAll); }, [fetchAll]);
 
   const days    = getDaysInMonth(year, month);
   const todayKey = formatDateKey(today);
@@ -313,94 +305,85 @@ export default function CalendarPage() {
   const prevMonth = () => { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); };
 
+  const exportIcs = () => {
+    const mk = items.filter((i) => i.type === "marketing").map((i) => ({ id: i.id, title: i.title, contentType: i.contentType ?? null, channels: i.channels ?? [], status: i.status ?? "", postDate: i.date }));
+    const tk = expOpt.tasks ? items.filter((i) => i.type === "task").map((i) => ({ id: i.id, title: i.title, date: i.date, priority: i.priority, assignee: i.assignee, category: i.category, note: i.note })) : [];
+    const { text, count } = buildIcs(mk, { posts: expOpt.posts, shoots: expOpt.shoots, includeDone: false }, tk);
+    if (!count) { setExpMsg("ไม่มีรายการที่จะส่งออก ลองติ๊กประเภทอื่นเพิ่ม"); return; }
+    downloadIcs(text, "fryday-calendar.ics");
+    setExpMsg(`สร้างไฟล์แล้ว ${count} รายการ เปิดไฟล์ที่ดาวน์โหลดเพื่อเพิ่มลงปฏิทิน`);
+  };
+
+  const FILTERS = { all: "ทั้งหมด", task: "📋 งาน", marketing: "📣 Marketing" } as const;
+
   return (
     <>
-      <main style={{ maxWidth: 680, margin: "0 auto", padding: "16px 12px 40px", fontFamily: "sans-serif" }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <button onClick={prevMonth} style={{ fontSize: 18, padding: "6px 12px", borderRadius: 8, border: "0.5px solid #e5e3db", background: "#fff", cursor: "pointer", color: "#1a1a18" }}>‹</button>
-          <p style={{ flex: 1, margin: 0, fontSize: 16, fontWeight: 600, color: "#1a1a18", textAlign: "center" }}>
-            {MONTH_TH[month]} {year + 543}
-          </p>
-          <button onClick={nextMonth} style={{ fontSize: 18, padding: "6px 12px", borderRadius: 8, border: "0.5px solid #e5e3db", background: "#fff", cursor: "pointer", color: "#1a1a18" }}>›</button>
-          <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelected(todayKey); }}
-            style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid #e5e3db", background: "#fff", color: "#C0200A", cursor: "pointer", fontWeight: 500 }}>
-            วันนี้
-          </button>
-          <button onClick={fetchAll} style={{ fontSize: 14, padding: "6px 10px", borderRadius: 8, border: "0.5px solid #e5e3db", background: "#fff", color: "#73726c", cursor: "pointer" }}>↻</button>
-        </div>
-
-        {/* Summary pills */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 11, padding: "4px 12px", borderRadius: 99, background: "#FEE9E7", color: "#C0200A", border: "0.5px solid #F5C0B8", fontWeight: 500 }}>
-            📋 {monthItems.filter(i => i.type === "task").length} งาน
+      <main className="cal">
+        <div className="cal-top">
+          <div className="cal-nav">
+            <button onClick={prevMonth} aria-label="เดือนก่อน">‹</button>
+            <h1>{MONTH_TH[month]} {year + 543}</h1>
+            <button onClick={nextMonth} aria-label="เดือนถัดไป">›</button>
+            <button className="cal-today" onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelected(todayKey); }}>วันนี้</button>
+            <button onClick={fetchAll} aria-label="โหลดใหม่" disabled={loading}>↻</button>
           </div>
-          <div style={{ fontSize: 11, padding: "4px 12px", borderRadius: 99, background: "#EEEDFE", color: "#3C3489", border: "0.5px solid #CECBF6", fontWeight: 500 }}>
-            📣 {monthItems.filter(i => i.type === "marketing").length} โพสต์
+          <div className="cal-seg" role="group" aria-label="กรองรายการ">
+            {(["all", "task", "marketing"] as const).map((f) => (
+              <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}>{FILTERS[f]}</button>
+            ))}
           </div>
-          {loading && <div style={{ fontSize: 11, color: "#73726c", padding: "4px 0" }}>กำลังโหลด...</div>}
+          <div className="cal-sum">
+            <span style={{ background: "#FEE9E7", color: "#C0200A" }}>📋 {monthItems.filter(i => i.type === "task").length} งาน</span>
+            <span style={{ background: "#EEEDFE", color: "#3C3489" }}>📣 {monthItems.filter(i => i.type === "marketing").length} โพสต์</span>
+            {loading && <em>กำลังโหลด…</em>}
+          </div>
+          <button className="cal-export" aria-expanded={exp} onClick={() => { setExp((v) => !v); setExpMsg(""); }}>📲 ลงปฏิทินมือถือ</button>
         </div>
 
-        {/* Filter */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-          {(["all","task","marketing"] as const).map((f) => {
-            const labels = { all: "ทั้งหมด", task: "📋 งาน", marketing: "📣 Marketing" };
-            const colors = { all: { bg: "#f6f5f0", color: "#1a1a18", border: "#d3d1c7" }, task: { bg: "#FEE9E7", color: "#C0200A", border: "#F5C0B8" }, marketing: { bg: "#EEEDFE", color: "#3C3489", border: "#CECBF6" } };
-            const c = colors[f];
-            return (
-              <button key={f} onClick={() => setFilter(f)} style={{
-                fontSize: 12, padding: "5px 12px", borderRadius: 99, cursor: "pointer",
-                border: `0.5px solid ${filter === f ? c.border : "#d3d1c7"}`,
-                background: filter === f ? c.bg : "transparent",
-                color: filter === f ? c.color : "#73726c",
-                fontWeight: filter === f ? 500 : 400,
-              }}>{labels[f]}</button>
-            );
-          })}
-        </div>
-
-        {/* Day headers */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3, marginBottom: 3 }}>
-          {DAY_TH.map((d, i) => (
-            <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: i === 0 ? "#C0200A" : i === 6 ? "#185FA5" : "#73726c", padding: "3px 0" }}>
-              {d}
+        {exp && (
+          <div className="cal-exp" role="group" aria-label="ส่งออกลงปฏิทินมือถือ">
+            <strong>ดาวน์โหลดเป็นไฟล์ปฏิทิน (.ics)</strong>
+            <div className="cal-exp-opts">
+              <label><input type="checkbox" checked={expOpt.tasks} onChange={(e) => setExpOpt((o) => ({ ...o, tasks: e.target.checked }))} /> งาน (เตือน 9 โมงเช้าวันครบกำหนด)</label>
+              <label><input type="checkbox" checked={expOpt.posts} onChange={(e) => setExpOpt((o) => ({ ...o, posts: e.target.checked }))} /> โพสต์ Marketing (เตือนก่อน 30 นาที)</label>
+              <label><input type="checkbox" checked={expOpt.shoots} onChange={(e) => setExpOpt((o) => ({ ...o, shoots: e.target.checked }))} /> วันถ่ายคลิป</label>
             </div>
-          ))}
-        </div>
-
-        {/* Calendar grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
-          {days.map((d, idx) => {
-            const key = formatDateKey(d);
-            return (
-              <DayCell key={idx} date={d} items={byDate[key] ?? []}
-                isCurrentMonth={d.getMonth() === month}
-                isToday={key === todayKey}
-                isSelected={key === selected}
-                onClick={() => setSelected(key === selected ? null : key)}
-              />
-            );
-          })}
-        </div>
-
-        {/* Day Detail Panel */}
-        {selected && (
-          <DayPanel
-            date={new Date(selected + "T00:00:00")}
-            items={selectedItems}
-            onSelectItem={setDetailItem}
-          />
+            <button className="cal-primary" disabled={!expOpt.tasks && !expOpt.posts && !expOpt.shoots} onClick={exportIcs}>ดาวน์โหลดไฟล์ปฏิทิน</button>
+            {expMsg && <p role="status" style={{ color: expMsg.startsWith("ไม่มี") ? "#C0200A" : "#27500A" }}>{expMsg}</p>}
+            <small>iPhone: เปิดไฟล์แล้วกด “เพิ่มทั้งหมด” · Android: เปิดด้วย Google Calendar · นำเข้าซ้ำได้ ระบบอัปเดตรายการเดิม ไม่สร้างเบิ้ล · เฉพาะงานที่ยังไม่เสร็จ</small>
+          </div>
         )}
 
-        {/* Legend */}
-        <div style={{ display: "flex", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
-          {(Object.entries(TYPE_STYLE) as [keyof typeof TYPE_STYLE, typeof TYPE_STYLE[keyof typeof TYPE_STYLE]][]).map(([k, s]) => (
-            <div key={k} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#73726c" }}>
-              <div style={{ width: 10, height: 10, borderRadius: 3, background: s.bg, border: `0.5px solid ${s.border}` }} />
-              {s.icon} {s.label}
+        <div className="cal-body">
+          <section className="cal-main" aria-label="ปฏิทินรายเดือน">
+            <div className="cal-grid">
+              {DAY_TH.map((d, i) => (
+                <div key={d} className="cal-dow" style={{ color: i === 0 ? "#C0200A" : i === 6 ? "#185FA5" : "#73726c" }}>{d}</div>
+              ))}
+              {days.map((d, idx) => {
+                const key = formatDateKey(d);
+                return (
+                  <DayCell key={idx} date={d} items={byDate[key] ?? []}
+                    isCurrentMonth={d.getMonth() === month}
+                    isToday={key === todayKey}
+                    isSelected={key === selected}
+                    onClick={() => setSelected(key === selected ? null : key)}
+                  />
+                );
+              })}
             </div>
-          ))}
+          </section>
+
+          <aside className="cal-side">
+            {selected
+              ? <DayPanel date={new Date(selected + "T00:00:00")} items={selectedItems} onSelectItem={setDetailItem} />
+              : <p className="cal-hint">เลือกวันในปฏิทินเพื่อดูรายการ</p>}
+            <div className="cal-legend">
+              {(Object.entries(TYPE_STYLE) as [keyof typeof TYPE_STYLE, typeof TYPE_STYLE[keyof typeof TYPE_STYLE]][]).map(([k, s]) => (
+                <div key={k}><i style={{ background: s.bg, border: `0.5px solid ${s.border}` }} />{s.icon} {s.label}</div>
+              ))}
+            </div>
+          </aside>
         </div>
       </main>
 
@@ -410,9 +393,76 @@ export default function CalendarPage() {
       <style>{`
         * { box-sizing: border-box; }
         body { background: #FBF8F5; -webkit-font-smoothing: antialiased; }
-        @media (max-width: 640px) {
-          main { padding: 12px 8px 80px !important; }
+        .cal { --red:#C0200A; --line:#E7E2D6; max-width: 1180px; margin: 0 auto; padding: 16px 16px 40px; color: #2a2118; }
+        .cal button { font: inherit; transition: background-color .15s, border-color .15s, filter .15s; }
+        .cal button:not(:disabled):hover { filter: brightness(.97); }
+        .cal button:disabled { opacity: .5; cursor: not-allowed; }
+        .cal button:focus-visible, .cal input:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+        .cal-top { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; }
+        .cal-nav { display: flex; align-items: center; gap: 6px; }
+        .cal-nav h1 { margin: 0; font-size: 20px; font-weight: 700; min-width: 150px; text-align: center; }
+        .cal-nav button, .cal-export { font-size: 14px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; color: #2a2118; }
+        .cal-nav .cal-today { font-size: 12px; color: var(--red); font-weight: 600; }
+        .cal-export { margin-left: auto; font-weight: 600; font-size: 13px; }
+        .cal-seg { display: flex; background: #ebe6d9; border-radius: 10px; padding: 3px; gap: 2px; }
+        .cal-seg button { border: none; background: transparent; font-size: 13px; padding: 5px 12px; border-radius: 8px; cursor: pointer; color: #2a2118; white-space: nowrap; }
+        .cal-seg button[aria-pressed="true"] { background: var(--red); color: #fff; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+        .cal-sum { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .cal-sum span { font-size: 12px; padding: 3px 10px; border-radius: 99px; font-weight: 500; }
+        .cal-sum em { font-size: 12px; color: #73726c; font-style: normal; }
+        .cal-exp { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; }
+        .cal-exp-opts { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+        .cal-primary { background: var(--red); color: #fff; border: 1px solid var(--red); border-radius: 8px; padding: 7px 14px; font-weight: 600; cursor: pointer; font-size: 13px; }
+        .cal-exp p { margin: 8px 0 0; }
+        .cal-exp small { display: block; margin-top: 8px; color: #73726c; font-size: 12px; }
+        .cal-body { display: flex; gap: 16px; align-items: flex-start; }
+        .cal-main { flex: 2 1 0; min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+        .cal-side { flex: 1 1 0; min-width: 280px; max-width: 420px; }
+        .cal-side > div:first-child { margin-top: 0 !important; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+        .cal-dow { text-align: center; font-size: 12px; font-weight: 600; padding: 2px 0 4px; }
+        .cal-cell { min-height: 78px; text-align: left; padding: 5px 4px 3px; border-radius: 10px; background: #fff; border: 1px solid var(--line); cursor: pointer; overflow: hidden; color: inherit; display: block; width: 100%; }
+        .cal-cell.weekend { background: #FBF9F3; }
+        .cal-cell.other { opacity: .4; }
+        .cal-cell.sel { border-color: var(--red); background: #FFF3EE; box-shadow: 0 0 0 1px var(--red) inset; }
+        .cal-num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 99px; font-size: 12px; margin-bottom: 2px; }
+        .cal-num.today { background: var(--red); color: #fff; font-weight: 700; }
+        .cal-count { display: none; font-size: 10px; color: #73726c; margin-left: 4px; }
+        .cal-chip { font-size: 10px; padding: 1px 4px; border-radius: 4px; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
+        .cal-more { font-size: 10px; color: var(--red); padding-left: 3px; font-weight: 500; }
+        .cal-hint { margin: 0; padding: 20px; text-align: center; font-size: 13px; color: #73726c; background: #fff; border: 1px dashed var(--line); border-radius: 14px; }
+        .cal-legend { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+        .cal-legend div { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #73726c; }
+        .cal-legend i { display: block; width: 10px; height: 10px; border-radius: 3px; }
+
+        @media (max-width: 899px) {
+          .cal-body { flex-direction: column; }
+          .cal-main, .cal-side { width: 100%; max-width: none; flex: none; }
+          .cal-export { margin-left: 0; }
         }
+        @media (max-width: 640px) {
+          .cal { padding: 12px 8px 80px; }
+          .cal-cell { min-height: 56px; padding: 3px; }
+          .cal-chip { font-size: 9px; }
+          .cal-nav h1 { min-width: 0; flex: 1; font-size: 17px; }
+          .cal-nav { width: 100%; }
+        }
+        /* จอคอม: ทั้งหน้าพอดีความสูงจอ ช่องวันยืดตามพื้นที่ ส่วนขวาเลื่อนในตัวเอง */
+        @media (min-width: 900px) and (min-height: 620px) {
+          .cal { height: calc(100dvh - 56px); display: flex; flex-direction: column; overflow: hidden; padding-top: 12px; padding-bottom: 14px; }
+          .cal > * { flex-shrink: 0; }
+          .cal-top { margin-bottom: 8px; }
+          .cal-body { flex: 1 1 0; min-height: 0; align-items: stretch; }
+          .cal-main { display: flex; flex-direction: column; min-height: 0; }
+          .cal-grid { flex: 1; min-height: 0; grid-template-rows: auto repeat(6, minmax(0, 1fr)); }
+          .cal-cell { min-height: 0; }
+          .cal-side { overflow-y: auto; }
+        }
+        @media (min-width: 900px) and (min-height: 620px) and (max-height: 820px) {
+          .cal-chip:nth-of-type(n+2), .cal-more { display: none; }
+          .cal-count { display: inline; }
+        }
+        @media (prefers-reduced-motion: reduce) { .cal * { transition: none !important; } }
       `}</style>
     </>
   );

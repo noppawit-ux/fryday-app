@@ -4,6 +4,7 @@ import { PLAN } from "@/lib/content-plan";
    UID คงที่ต่อคลิป: นำเข้าซ้ำแล้วปฏิทินจะอัปเดตรายการเดิมแทนการสร้างเบิ้ล */
 
 export interface IcsItem { id: string; title: string; contentType: string | null; channels: string[]; status: string; postDate: string | null }
+export interface IcsTask { id: string; title: string; date: string; priority?: string; assignee?: string | null; category?: string; note?: string | null }
 export interface IcsOptions { posts: boolean; shoots: boolean; includeDone: boolean }
 
 const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
@@ -25,7 +26,7 @@ function fold(line: string): string {
   return out.join("\r\n ");
 }
 
-export function buildIcs(items: IcsItem[], o: IcsOptions): { text: string; count: number } {
+export function buildIcs(items: IcsItem[], o: IcsOptions, tasks: IcsTask[] = []): { text: string; count: number } {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
   const ev: string[][] = [];
   const planOf = (title: string) => { const n = /^คลิป (\d+):/.exec(title)?.[1]; return n ? PLAN.find((p) => String(p.no) === n) : undefined; };
@@ -54,6 +55,13 @@ export function buildIcs(items: IcsItem[], o: IcsOptions): { text: string; count
       const desc = clips.map((p) => `คลิป ${p.no}: ${p.idea}`).join("\n") + "\n\nถ่ายทั้งหมดในวันเดียว แนวตั้ง 9:16";
       ev.push(["BEGIN:VEVENT", `UID:shoot-${date}@fryday-app`, `DTSTAMP:${stamp}`, `SUMMARY:${esc(`🎬 ถ่ายคลิป ${clips.length} คลิป (สัปดาห์ ${clips[0].week})`)}`, `DESCRIPTION:${esc(desc)}`, `DTSTART;VALUE=DATE:${d8(date)}`, `DTEND;VALUE=DATE:${nextDay(date)}`, "END:VEVENT"]);
     }
+  }
+  for (const k of tasks) {
+    if (!k.date) continue;
+    const date = k.date.slice(0, 10);
+    const desc = [k.priority && `ความสำคัญ: ${k.priority}`, k.assignee && `ผู้รับผิดชอบ: ${k.assignee}`, k.category && `หมวดหมู่: ${k.category}`, k.note && `หมายเหตุ: ${k.note}`].filter(Boolean).join("\n");
+    ev.push(["BEGIN:VEVENT", `UID:${k.id}-task@fryday-app`, `DTSTAMP:${stamp}`, `SUMMARY:${esc("📋 " + k.title)}`, ...(desc ? [`DESCRIPTION:${esc(desc)}`] : []), `DTSTART;VALUE=DATE:${d8(date)}`, `DTEND;VALUE=DATE:${nextDay(date)}`,
+      "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc("ครบกำหนดวันนี้: " + k.title)}`, "TRIGGER:PT9H", "END:VALARM", "END:VEVENT"]);
   }
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Fryday//Content Planner//TH", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Fryday คอนเทนต์", ...ev.flat(), "END:VCALENDAR"];
   return { text: lines.map(fold).join("\r\n") + "\r\n", count: ev.length };
