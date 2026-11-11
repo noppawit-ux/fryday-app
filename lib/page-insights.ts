@@ -57,6 +57,7 @@ export function mapHeader(h: string): Col {
   if (/(link.?(click|tap)|คลิกลิงก์)/.test(s)) return null;
   if (/(interaction|engagement|การโต้ตอบ)/.test(s)) return "interactions";
   if (/(viewers|unique|accounts reached|reach|ผู้ชม|การเข้าถึง|เข้าถึง)/.test(s)) return "viewers";
+  if (/(profile|โปรไฟล์)/.test(s)) return "profile_visits";
   if (/(view|play|impression|วิว|การดู|ยอดดู|จำนวนการดู)/.test(s)) return "views";
   if (/(like|ไลก์|ถูกใจ)/.test(s)) return "likes";
   if (/(comment|คอมเมนต์|ความคิดเห็น)/.test(s)) return "comments";
@@ -83,6 +84,25 @@ export function parseDay(raw: string): string | null {
   m = /^(\d{1,2}) ([A-Za-z]{3})[a-z]*\.? (\d{4})/.exec(s);
   if (m && MONTHS[m[2].toLowerCase()]) return ymd(+m[3], MONTHS[m[2].toLowerCase()], +m[1]);
   return null;
+}
+const TH_MONTHS: Record<string, number> = { "มกราคม": 1, "ม.ค.": 1, "กุมภาพันธ์": 2, "ก.พ.": 2, "มีนาคม": 3, "มี.ค.": 3, "เมษายน": 4, "เม.ย.": 4, "พฤษภาคม": 5, "พ.ค.": 5, "มิถุนายน": 6, "มิ.ย.": 6, "กรกฎาคม": 7, "ก.ค.": 7, "สิงหาคม": 8, "ส.ค.": 8, "กันยายน": 9, "ก.ย.": 9, "ตุลาคม": 10, "ต.ค.": 10, "พฤศจิกายน": 11, "พ.ย.": 11, "ธันวาคม": 12, "ธ.ค.": 12 };
+/* วันที่แบบไม่มีปี เช่น "10 พฤศจิกายน" (TikTok) → [เดือน, วัน] */
+export function parseThaiMonthDay(raw: string): [number, number] | null {
+  const m = /^(\d{1,2})\s+(\S+)$/.exec(raw.trim());
+  return m && TH_MONTHS[m[2]] ? [TH_MONTHS[m[2]], +m[1]] : null;
+}
+/* เรียงจากเก่าไปใหม่ ไม่เกิน 1 ปี: ปักแถวสุดท้ายให้ไม่เกินวันนี้ แล้วไล่ย้อนปี */
+export function inferYears(md: ([number, number] | null)[], today = bangkokToday()): (string | null)[] {
+  const out: (string | null)[] = new Array(md.length).fill(null);
+  let y = +today.slice(0, 4), next = 0;
+  for (let i = md.length - 1; i >= 0; i--) {
+    const v = md[i]; if (!v) continue;
+    if (!next) { const t = ymd(y, v[0], v[1]); if (t === null || t > today) y--; }
+    else if (v[0] > next) y--;
+    next = v[0];
+    out[i] = ymd(y, v[0], v[1]);
+  }
+  return out;
 }
 export function parseNum(raw: string): number | null {
   const s = raw.trim().replace(/,/g, "").replace(/\s/g, "");
@@ -123,8 +143,11 @@ export function rowsFromCsv(text: string): CsvResult {
   const ti = cols.indexOf("content_type");
   const out = new Map<string, ImportRow>();
   let skipped = 0;
-  for (const r of table.slice(1)) {
-    const day = parseDay(r[di] ?? "");
+  const body = table.slice(1);
+  const days = body.map((r) => parseDay(r[di] ?? ""));
+  if (!days.some(Boolean)) inferYears(body.map((r) => parseThaiMonthDay(r[di] ?? ""))).forEach((d, i) => { days[i] = d; });
+  for (const [ri, r] of body.entries()) {
+    const day = days[ri];
     if (!day) { skipped++; continue; }
     const content_type = ti >= 0 ? normType(r[ti] ?? "") : "all";
     const values: ImportRow["values"] = {};
