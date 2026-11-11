@@ -17,7 +17,13 @@ export async function GET(req: NextRequest) {
   try {
     const days = Math.min(1500, Math.max(7, Number(req.nextUrl.searchParams.get("days")) || 400));
     const since = addDays(bangkokToday(), -days);
-    const rows = (await sb<Record<string, unknown>[]>(`page_metrics?day=gte.${since}&select=*&order=day.asc&limit=20000`)) ?? [];
+    // Supabase ตัดผลลัพธ์ที่ 1,000 แถวต่อคำขอ จึงดึงเป็นหน้าๆ
+    const rows: Record<string, unknown>[] = [];
+    for (let offset = 0; offset < 30000; offset += 1000) {
+      const page = (await sb<Record<string, unknown>[]>(`page_metrics?day=gte.${since}&select=*&order=day.asc,channel.asc,content_type.asc&limit=1000&offset=${offset}`)) ?? [];
+      rows.push(...page);
+      if (page.length < 1000) break;
+    }
     return NextResponse.json({ rows });
   } catch (err) {
     console.error("[GET /api/marketing/insights]", err);

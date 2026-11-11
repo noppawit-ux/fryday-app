@@ -31,7 +31,7 @@ export default function InsightsPage() {
   const load = useCallback(async () => {
     const res = await fetch("/api/marketing/insights", { cache: "no-store" }).catch(() => null);
     const d = res ? await res.json().catch(() => ({})) : {};
-    if (!res?.ok) setLoadErr(d.error ?? "เชื่อมต่อไม่ได้");
+    if (!res?.ok) setLoadErr(`${d.error ?? "เชื่อมต่อไม่ได้"}${d.detail ? ` (${d.detail})` : ""}`);
     else { setRows(d.rows ?? []); setLoadErr(""); }
     setLoading(false);
   }, []);
