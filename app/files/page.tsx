@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import "../bento.css";
 
 interface FrydayFile {
   id: string;
@@ -17,20 +18,17 @@ interface FrydayFile {
 const CATEGORIES = ["ทั่วไป", "เมนู", "การเงิน", "Marketing"];
 const FILE_TYPES  = ["รูปภาพ", "เอกสาร", "วิดีโอ", "อื่นๆ"];
 
-const TYPE_ICON: Record<string, string> = {
-  รูปภาพ: "🖼️", เอกสาร: "📄", วิดีโอ: "🎬", "อื่นๆ": "📎",
-};
 const TYPE_STYLE: Record<string, { bg: string; color: string }> = {
-  รูปภาพ: { bg: "#EAF3DE", color: "#27500A" },
-  เอกสาร: { bg: "#E6F1FB", color: "#185FA5" },
-  วิดีโอ: { bg: "#EEEDFE", color: "#3C3489" },
-  "อื่นๆ": { bg: "#F1EFE8", color: "#5F5E5A" },
+  รูปภาพ: { bg: "#FDE1DA", color: "#8F1B0B" },
+  เอกสาร: { bg: "#FFF0D6", color: "#8A5300" },
+  วิดีโอ: { bg: "#2A0B07", color: "#FFD9CE" },
+  "อื่นๆ": { bg: "#F1EBE7", color: "#6B5A54" },
 };
 const CAT_STYLE: Record<string, { bg: string; color: string }> = {
-  เมนู:       { bg: "#FAEEDA", color: "#854F0B" },
-  การเงิน:   { bg: "#EAF3DE", color: "#27500A" },
-  Marketing: { bg: "#EEEDFE", color: "#3C3489" },
-  ทั่วไป:    { bg: "#F1EFE8", color: "#5F5E5A" },
+  เมนู:       { bg: "#FFE9DF", color: "#8A3A16" },
+  การเงิน:   { bg: "#E3F1E6", color: "#1F5A2E" },
+  Marketing: { bg: "#FDE1DA", color: "#8F1B0B" },
+  ทั่วไป:    { bg: "#F1EBE7", color: "#6B5A54" },
 };
 
 function formatSize(kb: number): string {
@@ -64,10 +62,10 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
     try {
       const res = await fetch("/api/files", { method: "POST", body: fd });
       if (!res.ok) throw new Error("อัปโหลดไม่สำเร็จ");
-      setProgress(`✅ อัปโหลด ${file.name} สำเร็จ!`);
+      setProgress(`อัปโหลด ${file.name} สำเร็จ!`);
       setTimeout(() => { setProgress(null); onUploaded(); }, 1500);
     } catch {
-      setProgress(`❌ อัปโหลดไม่สำเร็จ`);
+      setProgress(`อัปโหลดไม่สำเร็จ`);
       setTimeout(() => setProgress(null), 2000);
     } finally {
       setUploading(false);
@@ -80,57 +78,40 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
   };
 
   return (
-    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 14, padding: "20px 24px", marginBottom: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>📎 อัปโหลดไฟล์</p>
-        <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
-          {CATEGORIES.map((c) => {
-            const st = CAT_STYLE[c] ?? CAT_STYLE["ทั่วไป"];
-            return (
-              <button key={c} onClick={() => setCategory(c)} style={{
-                fontSize: 12, padding: "4px 12px", borderRadius: 99, cursor: "pointer",
-                border: `0.5px solid ${category === c ? st.color : "#d3d1c7"}`,
-                background: category === c ? st.bg : "transparent",
-                color: category === c ? st.color : "#73726c",
-                fontWeight: category === c ? 500 : 400,
-              }}>{c}</button>
-            );
-          })}
+    <section className="bn-card">
+      <div className="bn-head">
+        <h2>อัปโหลดไฟล์</h2>
+        <div className="bn-pills" role="group" aria-label="หมวดหมู่ที่จะอัปโหลด">
+          {CATEGORIES.map((c) => (
+            <button key={c} type="button" className="bn-pill" aria-pressed={category === c} onClick={() => setCategory(c)}>{c}</button>
+          ))}
         </div>
       </div>
 
-      {/* Drop zone */}
       <div
+        role="button" tabIndex={0}
         onClick={() => fileRef.current?.click()}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && fileRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
-        style={{
-          border: `2px dashed ${dragging ? "#534AB7" : "#d3d1c7"}`,
-          borderRadius: 10, padding: "32px 20px", textAlign: "center",
-          cursor: "pointer", background: dragging ? "#EEEDFE" : "#faf9f5",
-          transition: "all 0.15s",
-        }}
+        style={{ border: `2px dashed ${dragging ? "#C0200A" : "#E2C6BC"}`, borderRadius: 20, padding: "30px 20px", textAlign: "center", cursor: "pointer", background: dragging ? "#FDE8E4" : "#FBF4F0", transition: "all 0.15s" }}
       >
-        <p style={{ margin: "0 0 6px", fontSize: 28 }}>📂</p>
-        <p style={{ margin: "0 0 4px", fontSize: 14, color: "#1a1a18", fontWeight: 500 }}>
+        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#2A0B07", fontWeight: 600 }}>
           {uploading ? progress : "คลิกหรือลากไฟล์มาวางที่นี่"}
         </p>
-        <p style={{ margin: 0, fontSize: 12, color: "#73726c" }}>
-          รองรับทุกประเภทไฟล์ — รูปภาพ, PDF, Excel, Word, วิดีโอ
+        <p style={{ margin: 0, fontSize: 12.5, color: "#7A6A64" }}>
+          รองรับทุกประเภทไฟล์ เช่น รูปภาพ PDF Excel Word วิดีโอ
         </p>
-        <input
-          ref={fileRef} type="file" multiple hidden
-          onChange={(e) => handleFiles(e.target.files)}
-        />
+        <input ref={fileRef} type="file" multiple hidden onChange={(e) => handleFiles(e.target.files)} />
       </div>
 
       {progress && !uploading && (
-        <p style={{ margin: "8px 0 0", fontSize: 13, color: progress.startsWith("✅") ? "#27500A" : "#A32D2D", textAlign: "center" }}>
+        <p role="status" style={{ margin: "10px 0 0", fontSize: 13, color: progress.includes("สำเร็จ!") ? "#1F5A2E" : "#B3200A", textAlign: "center" }}>
           {progress}
         </p>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -141,32 +122,23 @@ function FileCard({ file }: { file: FrydayFile }) {
   const img = isImage(file.url);
 
   return (
-    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, overflow: "hidden" }}>
-      {/* Preview */}
-      <div style={{ height: 120, background: "#f6f5f0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+    <div style={{ background: "#fff", border: "1px solid #EBD9D2", borderRadius: 22, overflow: "hidden" }}>
+      <div style={{ height: 120, background: "#FBF4F0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
         {img
+          // eslint-disable-next-line @next/next/no-img-element
           ? <img src={file.url} alt={file.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <span style={{ fontSize: 48 }}>{TYPE_ICON[file.fileType] ?? "📎"}</span>
+          : <span style={{ fontSize: 22, fontWeight: 600, color: ts.color, background: ts.bg, borderRadius: 16, padding: "14px 20px" }}>{file.fileType}</span>
         }
       </div>
-
-      {/* Info */}
-      <div style={{ padding: "10px 12px" }}>
-        <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 500, color: "#1a1a18", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={file.name}>
-          {file.name}
-        </p>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
-          <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 99, background: ts.bg, color: ts.color }}>{file.fileType}</span>
-          <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 99, background: cs.bg, color: cs.color }}>{file.category}</span>
+      <div style={{ padding: "12px 14px" }}>
+        <p style={{ margin: "0 0 8px", fontSize: 13.5, fontWeight: 600, color: "#2A0B07", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={file.name}>{file.name}</p>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
+          <span className="bn-tag" style={{ background: ts.bg, color: ts.color }}>{file.fileType}</span>
+          <span className="bn-tag" style={{ background: cs.bg, color: cs.color }}>{file.category}</span>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: "#73726c" }}>{formatSize(file.size)} · {formatDate(file.date)}</span>
-          <a href={file.url} target="_blank" rel="noopener noreferrer" style={{
-            fontSize: 11, padding: "3px 10px", borderRadius: 99, textDecoration: "none",
-            background: "#E6F1FB", color: "#185FA5", border: "0.5px solid #B5D4F4",
-          }}>
-            เปิด ↗
-          </a>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11.5, color: "#7A6A64" }}>{formatSize(file.size)} · {formatDate(file.date)}</span>
+          <a href={file.url} target="_blank" rel="noopener noreferrer" className="bn-pill" style={{ padding: "4px 12px", fontSize: 12 }}>เปิด ↗</a>
         </div>
       </div>
     </div>
@@ -202,70 +174,41 @@ export default function FilesPage() {
     search === "" || f.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const btnStyle = (active: boolean, bg: string, color: string): React.CSSProperties => ({
-    fontSize: 12, padding: "5px 12px", borderRadius: 99, cursor: "pointer",
-    border: `0.5px solid ${active ? color : "#d3d1c7"}`,
-    background: active ? bg : "transparent",
-    color: active ? color : "#73726c",
-    fontWeight: active ? 500 : 400,
-  });
-
   return (
-    <main style={{ maxWidth: 1000, margin: "0 auto", padding: "24px 20px", fontFamily: "sans-serif" }}>
+    <main className="bn">
+      <section className="bn-hero">
+        <div>
+          <h1>ไฟล์งาน Fryday</h1>
+          <p>เก็บเมนู เอกสารการเงิน และไฟล์ Marketing ไว้ที่เดียว</p>
+        </div>
+        <div className="bn-hero-side">
+          {!loading && <div className="bn-kpi"><b>{files.length}</b><span>ไฟล์ทั้งหมด</span></div>}
+          <button className="bn-ghost" onClick={fetchFiles}>รีเฟรช</button>
+        </div>
+      </section>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 500, margin: 0, color: "#1a1a18" }}>📁 Fryday — ไฟล์งาน</h1>
-        <button onClick={fetchFiles} style={{ ...btnStyle(false, "", ""), marginLeft: "auto" }}>🔄 รีเฟรช</button>
-      </div>
-
-      {/* Upload Zone */}
       <UploadZone onUploaded={fetchFiles} />
 
-      {/* Filters */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-        {/* Search */}
-        <input
-          type="text" placeholder="🔍 ค้นหาชื่อไฟล์..." value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ fontSize: 13, padding: "6px 12px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "#fff", color: "#1a1a18", width: 180 }}
-        />
-
-        {/* Category filter */}
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {["ทั้งหมด", ...CATEGORIES].map((c) => {
-            const st = CAT_STYLE[c] ?? { bg: "#F1EFE8", color: "#5F5E5A" };
-            return <button key={c} onClick={() => setCatFilter(c)} style={btnStyle(catFilter === c, st.bg, st.color)}>{c}</button>;
-          })}
+      <section className="bn-card">
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+          <input type="search" aria-label="ค้นหาชื่อไฟล์" placeholder="ค้นหาชื่อไฟล์..." value={search} onChange={(e) => setSearch(e.target.value)} className="bn-in" style={{ width: 200, borderRadius: 99 }} />
+          <div className="bn-pills" role="group" aria-label="กรองหมวดหมู่">
+            {["ทั้งหมด", ...CATEGORIES].map((c) => <button key={c} className="bn-pill" aria-pressed={catFilter === c} onClick={() => setCatFilter(c)}>{c}</button>)}
+          </div>
+          <div className="bn-pills" role="group" aria-label="กรองประเภทไฟล์">
+            {["ทั้งหมด", ...FILE_TYPES].map((t) => <button key={t} className="bn-pill" aria-pressed={typeFilter === t} onClick={() => setTypeFilter(t)}>{t}</button>)}
+          </div>
         </div>
-
-        {/* Type filter */}
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {["ทั้งหมด", ...FILE_TYPES].map((t) => {
-            const st = TYPE_STYLE[t] ?? { bg: "#F1EFE8", color: "#5F5E5A" };
-            return <button key={t} onClick={() => setTypeFilter(t)} style={btnStyle(typeFilter === t, st.bg, st.color)}>{TYPE_ICON[t] ?? ""} {t}</button>;
-          })}
-        </div>
-      </div>
-
-      {/* Summary */}
-      <p style={{ fontSize: 13, color: "#73726c", marginBottom: 14 }}>
-        {loading ? "กำลังโหลด..." : `ไฟล์ทั้งหมด ${filtered.length} ไฟล์`}
-      </p>
-
-      {error && <p style={{ color: "#A32D2D", fontSize: 14 }}>❌ {error}</p>}
-
-      {/* Grid */}
-      {!loading && !error && (
-        filtered.length === 0
-          ? <div style={{ textAlign: "center", padding: "48px 0", color: "#aaa" }}>
-              <p style={{ fontSize: 32, margin: "0 0 8px" }}>📂</p>
-              <p style={{ fontSize: 14 }}>ยังไม่มีไฟล์ — ลองอัปโหลดไฟล์แรกได้เลย</p>
-            </div>
-          : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-              {filtered.map((f) => <FileCard key={f.id} file={f} />)}
-            </div>
-      )}
+        <p className="bn-sub" style={{ margin: "0 0 12px" }}>{loading ? "กำลังโหลด..." : `แสดง ${filtered.length} ไฟล์`}</p>
+        {error && <p className="bn-err" role="alert">{error}</p>}
+        {!loading && !error && (
+          filtered.length === 0
+            ? <p className="bn-empty">ยังไม่มีไฟล์ ลองอัปโหลดไฟล์แรกได้เลย</p>
+            : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 12 }}>
+                {filtered.map((f) => <FileCard key={f.id} file={f} />)}
+              </div>
+        )}
+      </section>
     </main>
   );
 }

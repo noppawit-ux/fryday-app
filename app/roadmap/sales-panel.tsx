@@ -5,16 +5,16 @@ import {
   DOW, PLAT, baht, chanStats, dataNotes, fmtDate, hrLabel, kfmt, monthLabel, num, snapStats, type Snapshot,
 } from "@/lib/roadmap-sales";
 
-const RED = "#C0200A", BLUE = "#2B6CB0", MUTED = "#73726c", LINE = "#e5e3db";
-const card: CSSProperties = { background: "#fff", border: `0.5px solid ${LINE}`, borderRadius: 12, padding: 16 };
+const RED = "#C0200A", BLUE = "#2A0B07", MUTED = "#7A6A64", LINE = "#EBD9D2";
+const card: CSSProperties = { background: "#fff", border: `1px solid ${LINE}`, borderRadius: 22, padding: 18 };
 const h3: CSSProperties = { fontSize: 14, fontWeight: 600, margin: "18px 0 6px" };
 const th: CSSProperties = { fontSize: 12, color: MUTED, fontWeight: 500, textAlign: "left", padding: "6px 8px" };
-const td: CSSProperties = { padding: "6px 8px", borderTop: `0.5px solid ${LINE}`, fontSize: 13.5, verticalAlign: "top" };
+const td: CSSProperties = { padding: "6px 8px", borderTop: `1px solid #F3E3DD`, fontSize: 13.5, verticalAlign: "top" };
 const r: CSSProperties = { textAlign: "right", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" };
 
 function Stat({ k, v, d }: { k: string; v: string; d?: React.ReactNode }) {
   return (
-    <div style={{ flex: "1 1 170px", background: "#FBF8F5", border: `0.5px solid ${LINE}`, borderRadius: 10, padding: "10px 12px" }}>
+    <div style={{ flex: "1 1 170px", background: "#FBF4F0", border: `1px solid ${LINE}`, borderRadius: 16, padding: "12px 14px" }}>
       <div style={{ fontSize: 12, color: MUTED }}>{k}</div>
       <div style={{ fontSize: 22, fontWeight: 600 }}>{v}</div>
       {d && <div style={{ fontSize: 12, color: MUTED }}>{d}</div>}
@@ -23,7 +23,7 @@ function Stat({ k, v, d }: { k: string; v: string; d?: React.ReactNode }) {
 }
 
 const Delta = ({ v }: { v: number | null }) =>
-  v == null ? null : <span style={{ color: v >= 0 ? "#1a7f4b" : RED, marginLeft: 4 }}>{v >= 0 ? "+" : ""}{v}%</span>;
+  v == null ? null : <span style={{ color: v >= 0 ? "#2E8B6A" : RED, marginLeft: 4 }}>{v >= 0 ? "+" : ""}{v}%</span>;
 
 function ChannelChart({ weeks }: { weeks: { week_start: string; delivery: number; store: number }[] }) {
   const W = 720, H = 220, L = 44, R = 8, T = 16, B = 28, pw = W - L - R, ph = H - T - B;
@@ -63,7 +63,7 @@ function Bars({ rows, hot }: { rows: { label: string; v: number; key: string }[]
       {rows.map((x) => (
         <div key={x.key} style={{ display: "grid", gridTemplateColumns: "64px minmax(0,1fr) 52px", gap: 8, alignItems: "center", fontSize: 13, padding: "2px 0" }}>
           <span style={{ fontWeight: hot.has(x.key) ? 600 : 400 }}>{x.label}</span>
-          <span style={{ height: 10, background: "#f1efe8", borderRadius: 99, overflow: "hidden" }}>
+          <span style={{ height: 10, background: "#F3E3DD", borderRadius: 99, overflow: "hidden" }}>
             <i style={{ display: "block", height: "100%", width: `${Math.round((x.v / max) * 100)}%`, background: RED, borderRadius: 99 }} />
           </span>
           <span style={{ textAlign: "right", color: MUTED }}>{kfmt(x.v)}</span>
@@ -90,7 +90,7 @@ export default function SalesPanel({ snap, fetchedAt, onRefresh, busy }: { snap:
           <h2 style={{ margin: 0, fontSize: 18 }}>ตัวเลขจริงจากระบบบัญชี</h2>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: MUTED }}>ข้อมูลถึง {fmtDate(snap.asOf)} · ดึงเมื่อ {when}</p>
         </div>
-        <button onClick={onRefresh} disabled={busy} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${LINE}`, background: "#fff", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+        <button onClick={onRefresh} disabled={busy} style={{ padding: "6px 12px", borderRadius: 99, border: `1px solid ${LINE}`, background: "#fff", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
           {busy ? "กำลังดึง…" : "รีเฟรชยอด"}
         </button>
       </div>
@@ -129,7 +129,7 @@ export default function SalesPanel({ snap, fetchedAt, onRefresh, busy }: { snap:
                         <td style={{ ...td, ...r }}>{baht(x.gross28)}</td>
                         <td style={{ ...td, ...r }}>{num(x.gross28) > 0 ? Math.round((num(x.gp28) / num(x.gross28)) * 100) + "%" : "-"}</td>
                         <td style={{ ...td, ...r }}>{cs.gps[x.platform] != null ? cs.gps[x.platform] + "%" : "-"}</td>
-                        <td style={td}>{new Date(snap.asOf).getTime() - new Date(x.last_day).getTime() > 7 * 86400000 ? <b style={{ color: "#b45309" }}>ข้อมูลหยุดที่ {fmtDate(x.last_day)}</b> : `ถึง ${fmtDate(x.last_day)}`}</td>
+                        <td style={td}>{new Date(snap.asOf).getTime() - new Date(x.last_day).getTime() > 7 * 86400000 ? <b style={{ color: "#8A5300" }}>ข้อมูลหยุดที่ {fmtDate(x.last_day)}</b> : `ถึง ${fmtDate(x.last_day)}`}</td>
                       </tr>
                     ))}
                   </tbody>

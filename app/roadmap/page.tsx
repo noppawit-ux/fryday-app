@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import SalesPanel from "./sales-panel";
+import "../bento.css";
 import { salesSignals, type Snapshot } from "@/lib/roadmap-sales";
 
 type Area = "system" | "sales" | "cost" | "people";
@@ -9,12 +10,12 @@ type Status = "todo" | "doing" | "done";
 interface Phase { id: string; name: string; goal: string; area: Area; start_date: string; end_date: string; sort_order: number }
 interface Task { id: string; title: string; phase_id: string; area: Area; status: Status; due: string | null; note: string; sort_order: number }
 
-const RED = "#C0200A", MUTED = "#73726c", LINE = "#e5e3db";
+const RED = "#C0200A", MUTED = "#7A6A64", LINE = "#EBD9D2";
 const AREA: Record<Area, { label: string; color: string }> = {
-  system: { label: "ระบบ", color: "#2B6CB0" },
-  sales: { label: "ยอดขาย", color: "#0F8A9D" },
+  system: { label: "ระบบ", color: "#2A0B07" },
+  sales: { label: "ยอดขาย", color: "#E8895F" },
   cost: { label: "ต้นทุน", color: "#C0200A" },
-  people: { label: "คน", color: "#7C5CD6" },
+  people: { label: "คน", color: "#A8736A" },
 };
 const STATUS: Record<Status, { label: string; icon: string; next: Status }> = {
   todo: { label: "ยังไม่ทำ", icon: "○", next: "doing" },
@@ -22,9 +23,9 @@ const STATUS: Record<Status, { label: string; icon: string; next: Status }> = {
   done: { label: "เสร็จแล้ว", icon: "●", next: "todo" },
 };
 
-const card: CSSProperties = { background: "#fff", border: `0.5px solid ${LINE}`, borderRadius: 12, padding: 16 };
-const input: CSSProperties = { font: "inherit", fontSize: 14, padding: "8px 10px", border: `1px solid ${LINE}`, borderRadius: 8, width: "100%", background: "#fff" };
-const btn: CSSProperties = { font: "inherit", fontSize: 14, padding: "6px 12px", border: `1px solid ${LINE}`, borderRadius: 8, background: "#fff", cursor: "pointer" };
+const card: CSSProperties = { background: "#fff", border: `1px solid ${LINE}`, borderRadius: 22, padding: 18 };
+const input: CSSProperties = { font: "inherit", fontSize: 14, padding: "8px 10px", border: `1px solid ${LINE}`, borderRadius: 12, width: "100%", background: "#FBF4F0" };
+const btn: CSSProperties = { font: "inherit", fontSize: 14, padding: "7px 16px", border: `1px solid ${LINE}`, borderRadius: 99, background: "#fff", cursor: "pointer" };
 const btnPrimary: CSSProperties = { ...btn, background: RED, color: "#fff", borderColor: RED, fontWeight: 600 };
 
 const today = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10); // วันที่ตามเวลาไทย
@@ -71,7 +72,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   }, [onClose]);
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()} style={{ ...card, width: "100%", maxWidth: 440, maxHeight: "90vh", overflow: "auto" }}>
+      <div role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()} style={{ ...card, borderRadius: 26, width: "100%", maxWidth: 440, maxHeight: "90vh", overflow: "auto" }}>
         <h2 style={{ margin: "0 0 12px", fontSize: 18 }}>{title}</h2>
         {children}
       </div>
@@ -243,20 +244,22 @@ export default function RoadmapPage() {
   if (!authed) return <Login onDone={() => void loadPlan()} />;
 
   const done = tasks.filter((x) => x.status === "done").length;
-  const sevColor = { bad: RED, warn: "#b45309", info: "#2B6CB0" };
+  const sevColor = { bad: RED, warn: "#E0A12B", info: "#7A6A64" };
 
   return (
-    <main style={{ maxWidth: 980, margin: "0 auto", padding: "20px 16px 60px", display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+    <main className="bn" style={{ maxWidth: 980 }}>
+      <section className="bn-hero">
         <div>
-          <h1 style={{ margin: 0, fontSize: 24 }}>Roadmap ร้าน Fryday</h1>
-          <p style={{ margin: "2px 0 0", fontSize: 13, color: MUTED }}>เสร็จแล้ว {done} จาก {tasks.length} งาน</p>
+          <h1>Roadmap ร้าน Fryday</h1>
+          <p>เสร็จแล้ว {done} จาก {tasks.length} งาน</p>
         </div>
-        <span style={{ flex: 1 }} />
-        <button style={btn} onClick={() => setHideDone((v) => !v)}>{hideDone ? "แสดงงานที่เสร็จ" : "ซ่อนงานที่เสร็จ"}</button>
-        <button style={btnPrimary} onClick={() => setPhaseModal({ phase: null })}>เพิ่มเฟส</button>
-        <button style={btn} onClick={logout}>ออกจากระบบ</button>
-      </div>
+        <div className="bn-hero-side">
+          <div className="bn-kpi"><b>{tasks.length ? Math.round((done / tasks.length) * 100) : 0}%</b><span>ความคืบหน้ารวม</span></div>
+          <button className="bn-ghost" onClick={() => setHideDone((v) => !v)}>{hideDone ? "แสดงงานที่เสร็จ" : "ซ่อนงานที่เสร็จ"}</button>
+          <button className="bn-btn coral" onClick={() => setPhaseModal({ phase: null })}>เพิ่มเฟส</button>
+          <button className="bn-ghost" onClick={logout}>ออกจากระบบ</button>
+        </div>
+      </section>
 
       {loadErr && <p role="alert" style={{ ...card, color: RED, margin: 0 }}>{loadErr}</p>}
 
@@ -290,7 +293,7 @@ export default function RoadmapPage() {
         const dn = all.filter((x) => x.status === "done").length;
         const pct = all.length ? Math.round((dn / all.length) * 100) : 0;
         return (
-          <section key={p.id} style={{ ...card, borderLeft: `4px solid ${AREA[p.area].color}` }}>
+          <section key={p.id} style={{ ...card, borderLeft: `5px solid ${AREA[p.area].color}` }}>
             <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div style={{ minWidth: 0 }}>
                 <h2 style={{ margin: 0, fontSize: 17 }}>{p.name}</h2>
@@ -301,16 +304,16 @@ export default function RoadmapPage() {
               <button style={btn} onClick={() => setPhaseModal({ phase: p })}>แก้ไขเฟส</button>
               <button style={btn} onClick={() => setTaskModal({ task: null, phase: p.id })}>เพิ่มงาน</button>
             </div>
-            <div style={{ height: 6, background: "#f1efe8", borderRadius: 99, margin: "10px 0" }}><div style={{ width: `${pct}%`, height: "100%", background: AREA[p.area].color, borderRadius: 99 }} /></div>
+            <div style={{ height: 10, background: "#F3E3DD", borderRadius: 99, margin: "12px 0" }}><div style={{ width: `${pct}%`, height: "100%", background: AREA[p.area].color, borderRadius: 99 }} /></div>
             {shown.length === 0 ? <p style={{ margin: 0, fontSize: 14, color: MUTED }}>{all.length ? "งานทั้งหมดเสร็จแล้ว" : "ยังไม่มีงานในเฟสนี้"}</p> : (
               <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
                 {shown.map((x) => {
                   const late = x.status !== "done" && x.due && x.due < today();
                   return (
-                    <li key={x.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderTop: `0.5px solid ${LINE}` }}>
-                      <button aria-label={`สถานะ: ${STATUS[x.status].label} กดเพื่อเปลี่ยน`} title={STATUS[x.status].label} onClick={() => void setStatus(x)} style={{ ...btn, padding: "0 8px", minWidth: 34, minHeight: 34, fontSize: 18, color: AREA[x.area].color }}>{STATUS[x.status].icon}</button>
+                    <li key={x.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderTop: `1px solid #F3E3DD` }}>
+                      <button aria-label={`สถานะ: ${STATUS[x.status].label} กดเพื่อเปลี่ยน`} title={STATUS[x.status].label} onClick={() => void setStatus(x)} style={{ ...btn, padding: "0 8px", minWidth: 36, minHeight: 36, borderRadius: 99, fontSize: 18, color: AREA[x.area].color }}>{STATUS[x.status].icon}</button>
                       <button onClick={() => setTaskModal({ task: x, phase: p.id })} style={{ all: "unset", cursor: "pointer", flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: 14.5, textDecoration: x.status === "done" ? "line-through" : "none", color: x.status === "done" ? MUTED : "#1a1a18", overflowWrap: "anywhere" }}>{x.title}</span>
+                        <span style={{ fontSize: 14.5, textDecoration: x.status === "done" ? "line-through" : "none", color: x.status === "done" ? MUTED : "#2A0B07", overflowWrap: "anywhere" }}>{x.title}</span>
                         <span style={{ display: "block", fontSize: 12, color: late ? RED : MUTED }}>{x.due ? `กำหนด ${fmt(x.due)}${late ? " (เกินกำหนด)" : ""}` : "ไม่มีกำหนด"}{x.note ? ` · ${x.note}` : ""}</span>
                       </button>
                     </li>

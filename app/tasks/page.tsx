@@ -2,28 +2,29 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { FrydayTask, TaskStatus } from "@/lib/notion";
+import "../bento.css";
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; border: string; dot: string }> = {
-  รอดำเนินการ: { label: "รอดำเนินการ", color: "#185FA5", bg: "#E6F1FB", border: "#B5D4F4", dot: "#378ADD" },
-  กำลังทำ:    { label: "กำลังทำ",     color: "#854F0B", bg: "#FAEEDA", border: "#FAC775", dot: "#E0A526" },
-  เสร็จแล้ว:  { label: "เสร็จแล้ว",   color: "#27500A", bg: "#EAF3DE", border: "#C0DD97", dot: "#3B8B2E" },
-  ติดปัญหา:   { label: "ติดปัญหา",    color: "#791F1F", bg: "#FCEBEB", border: "#F7C1C1", dot: "#D4382A" },
+  รอดำเนินการ: { label: "รอดำเนินการ", color: "#B3200A", bg: "#FDE8E4", border: "#F5C0B8", dot: "#C0200A" },
+  กำลังทำ:    { label: "กำลังทำ",     color: "#8A5300", bg: "#FFF0D6", border: "#F3D49A", dot: "#E0A12B" },
+  เสร็จแล้ว:  { label: "เสร็จแล้ว",   color: "#1F5A2E", bg: "#E3F1E6", border: "#B9D9C0", dot: "#3C9A78" },
+  ติดปัญหา:   { label: "ติดปัญหา",    color: "#2A0B07", bg: "#F1E4E0", border: "#D9B8AE", dot: "#2A0B07" },
 };
 
 // ความสำคัญ: ใช้ป้ายสีมีตัวหนังสือกำกับ (ไม่พึ่งสีอย่างเดียว)
 const PRIORITY_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  ด่วนมาก: { color: "#A32D2D", bg: "#FCEBEB", border: "#F7C1C1" },
-  ปานกลาง: { color: "#854F0B", bg: "#FAEEDA", border: "#FAC775" },
-  ไม่เร่งด่วน: { color: "#27500A", bg: "#EAF3DE", border: "#C0DD97" },
+  ด่วนมาก: { color: "#fff", bg: "#C0200A", border: "#C0200A" },
+  ปานกลาง: { color: "#8A5300", bg: "#FFF0D6", border: "#F3D49A" },
+  ไม่เร่งด่วน: { color: "#1F5A2E", bg: "#E3F1E6", border: "#B9D9C0" },
 };
 
 // หมวดหมู่: แถบสีด้านซ้ายของการ์ด + ป้ายชื่อหมวด
 const CATEGORY_STYLE: Record<string, { bar: string; color: string; bg: string }> = {
-  ครัว: { bar: "#E07B1A", color: "#8A4A0B", bg: "#FDF0E3" },
-  การเงิน: { bar: "#3B8B2E", color: "#27500A", bg: "#EAF3DE" },
-  การตลาด: { bar: "#6A5FD6", color: "#3C3489", bg: "#EEEDFE" },
-  ทั่วไป: { bar: "#9A978B", color: "#5F5E5A", bg: "#F1EFE8" },
-  HR: { bar: "#1D9E75", color: "#0F6E56", bg: "#E1F5EE" },
+  ครัว: { bar: "#E8895F", color: "#8A3A16", bg: "#FFE9DF" },
+  การเงิน: { bar: "#3C9A78", color: "#1F5A2E", bg: "#E3F1E6" },
+  การตลาด: { bar: "#C0200A", color: "#8F1B0B", bg: "#FDE1DA" },
+  ทั่วไป: { bar: "#A89690", color: "#5F504A", bg: "#F1EBE7" },
+  HR: { bar: "#2A0B07", color: "#2A0B07", bg: "#EADBD6" },
 };
 const CAT_FALLBACK = CATEGORY_STYLE["ทั่วไป"];
 
@@ -46,8 +47,8 @@ interface FormState { name: string; status: TaskStatus; category: string; priori
 
 const CATEGORIES = ["การตลาด", "ครัว", "การเงิน", "ทั่วไป", "HR"];
 const PRIORITIES = ["ปานกลาง", "ด่วนมาก", "ไม่เร่งด่วน"];
-const inp: React.CSSProperties = { width: "100%", fontSize: 14, padding: "9px 10px", borderRadius: 8, border: "0.5px solid #d3d1c7", background: "#fff", color: "#1a1a18", boxSizing: "border-box", font: "inherit" };
-const lab: React.CSSProperties = { display: "block", margin: "0 0 4px", fontSize: 12, color: "#73726c" };
+const inp: React.CSSProperties = { width: "100%", fontSize: 14, padding: "9px 10px", borderRadius: 12, border: "1px solid #EBD9D2", background: "#FBF4F0", color: "#2A0B07", boxSizing: "border-box", font: "inherit" };
+const lab: React.CSSProperties = { display: "block", margin: "0 0 4px", fontSize: 12, color: "#7A6A64" };
 
 function Fields({ f, setF, people, peopleErr, showStatus, onEnter }: {
   f: FormState; setF: (f: FormState) => void; people: Person[]; peopleErr: string; showStatus: boolean; onEnter?: () => void;
@@ -135,14 +136,14 @@ function EditModal({ task, people, peopleErr, onClose, onSaved }: {
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div role="dialog" aria-label="แก้ไขงาน" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", width: "100%", maxWidth: 640, maxHeight: "92vh", overflow: "auto" }}>
+      <div role="dialog" aria-label="แก้ไขงาน" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 26, padding: "22px 24px", width: "100%", maxWidth: 640, maxHeight: "92vh", overflow: "auto" }}>
         <p style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 500 }}>แก้ไขงาน</p>
         <Fields f={effective} setF={onChange} people={people} peopleErr={peopleErr} showStatus onEnter={save} />
         {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D", background: "#FCEBEB", border: "1px solid #F7C1C1", borderRadius: 8, padding: "8px 10px" }}>{err}</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "center", flexWrap: "wrap" }}>
           <button onClick={del} disabled={busy} style={{ fontSize: 13.5, padding: "9px 16px", borderRadius: 99, border: "0.5px solid #F7C1C1", background: confirmDel ? "#FCEBEB" : "transparent", color: "#791F1F", cursor: "pointer" }}>{confirmDel ? "ยืนยันลบงาน" : "ลบงาน"}</button>
           <span style={{ flex: 1 }} />
-          <button onClick={onClose} style={{ fontSize: 14, padding: "9px 18px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>ยกเลิก</button>
+          <button onClick={onClose} style={{ fontSize: 14, padding: "9px 18px", borderRadius: 99, border: "1px solid #EBD9D2", background: "#fff", color: "#7A6A64", cursor: "pointer" }}>ยกเลิก</button>
           <button onClick={save} disabled={busy} style={{ fontSize: 14, padding: "9px 22px", borderRadius: 99, border: "none", background: "#C0200A", color: "#fff", cursor: "pointer", fontWeight: 600, opacity: busy ? 0.6 : 1 }}>{busy ? "กำลังบันทึก…" : "บันทึก"}</button>
         </div>
       </div>
@@ -160,42 +161,42 @@ function TaskCard({ task, onToggleDone, onChangeStatus, onEdit }: {
   const cat = CATEGORY_STYLE[task.category] ?? CAT_FALLBACK;
   const pri = PRIORITY_STYLE[task.priority];
   const st = STATUS_CONFIG[task.status];
-  const chip: React.CSSProperties = { fontSize: 11.5, padding: "2px 8px", borderRadius: 6, border: "1px solid", whiteSpace: "nowrap", lineHeight: 1.5 };
+  const chip: React.CSSProperties = { fontSize: 11.5, padding: "2px 9px", borderRadius: 99, border: "1px solid", whiteSpace: "nowrap", lineHeight: 1.5 };
   return (
-    <div style={{ background: "#fff", border: "1px solid #E7E2D6", borderLeft: `5px solid ${cat.bar}`, borderRadius: 10, opacity: task.done ? 0.55 : 1, transition: "opacity 0.2s", minWidth: 0, overflow: "hidden" }}>
+    <div style={{ background: "#fff", border: "1px solid #EBD9D2", borderLeft: `5px solid ${cat.bar}`, borderRadius: "6px 18px 18px 6px", opacity: task.done ? 0.55 : 1, transition: "opacity 0.2s", minWidth: 0, overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px 10px" }}>
-        <input type="checkbox" aria-label="ทำเสร็จแล้ว" checked={task.done} onChange={() => onToggleDone(task.id, !task.done)} style={{ marginTop: 3, width: 18, height: 18, flex: "none", cursor: "pointer", accentColor: "#1D9E75" }} />
+        <input type="checkbox" aria-label="ทำเสร็จแล้ว" checked={task.done} onChange={() => onToggleDone(task.id, !task.done)} style={{ marginTop: 3, width: 18, height: 18, flex: "none", cursor: "pointer", accentColor: "#C0200A" }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <span style={{ ...chip, border: "none", background: cat.bg, color: cat.color, fontWeight: 600, marginBottom: 5, display: "inline-block" }}>{task.category}</span>
           <p style={{ margin: 0, fontSize: 15, fontWeight: 600, textDecoration: task.done ? "line-through" : "none", lineHeight: 1.4, overflowWrap: "anywhere" }}>{task.name}</p>
           <div style={{ display: "flex", gap: "6px 8px", marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ ...chip, borderColor: "#E7E2D6", color: task.assignee ? "#3a3933" : "#9a978b", display: "inline-flex", alignItems: "center", gap: 6, paddingLeft: 4 }}>
+            <span style={{ ...chip, borderColor: "#EBD9D2", color: task.assignee ? "#2A0B07" : "#A89690", display: "inline-flex", alignItems: "center", gap: 6, paddingLeft: 4 }}>
               <span aria-hidden="true" style={{ width: 18, height: 18, borderRadius: 99, background: task.assignee ? cat.bar : "#D3D1C7", color: "#fff", fontSize: 10.5, fontWeight: 600, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{task.assignee ? task.assignee.trim().charAt(0).toUpperCase() : "?"}</span>
               {task.assignee ?? "ยังไม่มอบหมาย"}
             </span>
             {task.deadline && (
-              <span style={{ ...chip, borderColor: overdue ? "#F7C1C1" : "#E7E2D6", background: overdue ? "#FCEBEB" : "#FBF9F3", color: overdue ? "#A32D2D" : "#5a5950", fontWeight: overdue ? 600 : 400 }}>
+              <span style={{ ...chip, borderColor: overdue ? "#F5C0B8" : "#EBD9D2", background: overdue ? "#FDE8E4" : "#FBF4F0", color: overdue ? "#B3200A" : "#5F504A", fontWeight: overdue ? 600 : 400 }}>
                 {overdue ? "เกินกำหนด " : "กำหนด "}{formatDate(task.deadline)}
               </span>
             )}
             {pri && <span style={{ ...chip, color: pri.color, background: pri.bg, borderColor: pri.border, fontWeight: 500 }}>{task.priority}</span>}
           </div>
-          {task.note && <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "#5a5950", lineHeight: 1.5, overflowWrap: "anywhere", background: "#FBF9F3", border: "1px solid #EFEADC", borderRadius: 6, padding: "6px 8px" }}>{task.note}</p>}
+          {task.note && <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "#5a5950", lineHeight: 1.5, overflowWrap: "anywhere", background: "#FBF4F0", border: "1px solid #F3E3DD", borderRadius: 10, padding: "6px 10px" }}>{task.note}</p>}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 6, padding: "8px 14px", borderTop: "1px solid #EFEADC", background: "#FBF9F3" }}>
+      <div style={{ display: "flex", gap: 6, padding: "8px 14px", borderTop: "1px solid #F3E3DD", background: "#FBF4F0" }}>
         <span style={{ position: "relative", flex: 1, minWidth: 0, display: "flex" }}>
           <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "flex" }}><Dot color={st.dot} /></span>
           <select
             aria-label="เปลี่ยนสถานะ"
             value={task.status}
             onChange={(e) => onChangeStatus(task.id, e.target.value as TaskStatus)}
-            style={{ flex: 1, minWidth: 0, font: "inherit", fontSize: 12.5, padding: "6px 8px 6px 26px", borderRadius: 8, border: `1px solid ${st.border}`, background: st.bg, color: st.color, cursor: "pointer", fontWeight: 500 }}
+            style={{ flex: 1, minWidth: 0, font: "inherit", fontSize: 12.5, padding: "6px 8px 6px 26px", borderRadius: 99, border: `1px solid ${st.border}`, background: st.bg, color: st.color, cursor: "pointer", fontWeight: 500 }}
           >
             {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
           </select>
         </span>
-        <button onClick={() => onEdit(task)} aria-label={`แก้ไขงาน ${task.name}`} style={{ flex: "none", font: "inherit", fontSize: 12.5, padding: "6px 14px", borderRadius: 8, border: "1px solid #d3cab4", background: "#fff", color: "#3a3933", cursor: "pointer", fontWeight: 500 }}>แก้ไข</button>
+        <button onClick={() => onEdit(task)} aria-label={`แก้ไขงาน ${task.name}`} style={{ flex: "none", font: "inherit", fontSize: 12.5, padding: "6px 14px", borderRadius: 99, border: "1px solid #EBD9D2", background: "#fff", color: "#2A0B07", cursor: "pointer", fontWeight: 500 }}>แก้ไข</button>
       </div>
     </div>
   );
@@ -209,7 +210,7 @@ function Column({ status, tasks, onToggleDone, onChangeStatus, onEdit }: {
 }) {
   const cfg = STATUS_CONFIG[status];
   return (
-    <section aria-label={cfg.label} style={{ background: cfg.bg + "88", border: `1px solid ${cfg.border}`, borderTop: `4px solid ${cfg.dot}`, borderRadius: 12, padding: 10, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+    <section aria-label={cfg.label} style={{ background: cfg.bg + "99", border: `1px solid ${cfg.border}`, borderRadius: 24, padding: 12, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 4px 6px" }}>
         <Dot color={cfg.dot} size={10} />
         <span style={{ fontSize: 14, fontWeight: 600, color: cfg.color }}>{cfg.label}</span>
@@ -243,14 +244,14 @@ function AddTaskForm({ people, peopleErr, onClose, onAdded }: { people: Person[]
   };
 
   return (
-    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 18px", marginBottom: 16 }}>
+    <div style={{ background: "#fff", border: "1px solid #EBD9D2", borderRadius: 24, padding: "18px 20px", marginBottom: 16 }}>
       <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 500 }}>เพิ่มงานใหม่</p>
       <Fields f={f} setF={setF} people={people} peopleErr={peopleErr} showStatus={false} onEnter={submit} />
       {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D", background: "#FCEBEB", border: "1px solid #F7C1C1", borderRadius: 8, padding: "8px 10px" }}>{err}</p>}
-      {added && <p role="status" style={{ margin: "10px 0 0", fontSize: 13, color: "#27500A", background: "#EAF3DE", border: "1px solid #C0DD97", borderRadius: 8, padding: "8px 10px" }}>เพิ่มงาน “{added}” แล้ว กรอกต่อเพื่อเพิ่มงานถัดไปได้</p>}
+      {added && <p role="status" style={{ margin: "10px 0 0", fontSize: 13, color: "#1F5A2E", background: "#E3F1E6", border: "1px solid #B9D9C0", borderRadius: 8, padding: "8px 10px" }}>เพิ่มงาน “{added}” แล้ว กรอกต่อเพื่อเพิ่มงานถัดไปได้</p>}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button onClick={submit} disabled={busy} style={{ fontSize: 14, padding: "9px 22px", borderRadius: 99, border: "none", background: "#C0200A", color: "#fff", cursor: "pointer", fontWeight: 600, opacity: busy ? 0.6 : 1 }}>{busy ? "กำลังบันทึก…" : "บันทึกงาน"}</button>
-        <button onClick={onClose} style={{ fontSize: 14, padding: "9px 18px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>ปิด</button>
+        <button onClick={onClose} style={{ fontSize: 14, padding: "9px 18px", borderRadius: 99, border: "1px solid #EBD9D2", background: "#fff", color: "#7A6A64", cursor: "pointer" }}>ปิด</button>
       </div>
     </div>
   );
@@ -259,7 +260,7 @@ function AddTaskForm({ people, peopleErr, onClose, onAdded }: { people: Person[]
 const LAYOUT_CSS = `
 .tk-board{display:grid;gap:12px;align-items:start;grid-template-columns:repeat(4,minmax(0,1fr))}
 .tk-board.one{grid-template-columns:minmax(0,640px)}
-.tk-stats{display:grid;gap:10px;grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:16px}
+.tk-stats{display:grid;gap:12px;grid-template-columns:repeat(5,minmax(0,1fr))}
 .tk-form{display:grid;gap:10px;grid-template-columns:repeat(3,minmax(0,1fr))}
 .tk-form .tk-wide{grid-column:1/-1}
 @media (max-width:1100px){
@@ -327,31 +328,39 @@ export default function TasksPage() {
   const allStatuses = Object.keys(STATUS_CONFIG) as TaskStatus[];
   const byStatus = (s: TaskStatus) => tasks.filter((t) => t.status === s);
 
-  const pill = (active: boolean, color: string, bg: string, border: string): React.CSSProperties => ({ fontSize: 12.5, padding: "6px 12px", borderRadius: 99, border: `0.5px solid ${active ? border : "#e5e3db"}`, background: active ? bg : "transparent", color: active ? color : "#73726c", cursor: "pointer", fontWeight: active ? 500 : 400, whiteSpace: "nowrap" });
+  const pill = (active: boolean): React.CSSProperties => ({ fontSize: 12.5, padding: "7px 14px", borderRadius: 99, border: `1px solid ${active ? "#2A0B07" : "#EBD9D2"}`, background: active ? "#2A0B07" : "#fff", color: active ? "#fff" : "#7A6A64", cursor: "pointer", fontWeight: active ? 600 : 400, whiteSpace: "nowrap" });
+  const openCount = tasks.filter((t) => t.status !== "เสร็จแล้ว").length;
+  const lateCount = tasks.filter((t) => isOverdue(t.deadline, t.done)).length;
 
   return (
-    <main style={{ padding: "24px 20px 60px", maxWidth: 1280, margin: "0 auto" }}>
+    <main className="bn" style={{ maxWidth: 1280 }}>
       <style>{LAYOUT_CSS}</style>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>งานของร้าน Fryday</h1>
-        <button onClick={() => { setAdding((v) => !v); setNotice(""); }} aria-expanded={adding} style={{ marginLeft: "auto", fontSize: 14, padding: "9px 20px", borderRadius: 99, border: "none", background: "#C0200A", color: "#fff", cursor: "pointer", fontWeight: 600 }}>{adding ? "ปิดฟอร์ม" : "+ เพิ่มงาน"}</button>
-      </div>
+      <section className="bn-hero">
+        <div>
+          <h1>งานของร้าน Fryday</h1>
+          <p>ติดตามงานของทีมตามสถานะ เปลี่ยนสถานะและแก้ไขได้จากการ์ด</p>
+        </div>
+        <div className="bn-hero-side">
+          {!loading && <div className="bn-kpi"><b>{openCount}</b><span>งานคงค้าง</span></div>}
+          {!loading && <div className="bn-kpi"><b style={{ color: lateCount ? "#FFC27A" : undefined }}>{lateCount}</b><span>เกินกำหนด</span></div>}
+          <button onClick={() => { setAdding((v) => !v); setNotice(""); }} aria-expanded={adding} className="bn-btn coral">{adding ? "ปิดฟอร์ม" : "+ เพิ่มงาน"}</button>
+        </div>
+      </section>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        {(["all", ...allStatuses] as const).map((s) => {
-          const c = s === "all" ? { color: "#27500A", bg: "#EAF3DE", border: "#1D9E75" } : STATUS_CONFIG[s];
-          return <button key={s} onClick={() => setFilter(s)} aria-pressed={filter === s} style={{ ...pill(filter === s, c.color, c.bg, c.border), display: "inline-flex", alignItems: "center", gap: 6 }}>{s !== "all" && <Dot color={STATUS_CONFIG[s].dot} size={7} />}{s === "all" ? "ทุกสถานะ" : STATUS_CONFIG[s].label}</button>;
-        })}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+        {(["all", ...allStatuses] as const).map((s) => (
+          <button key={s} onClick={() => setFilter(s)} aria-pressed={filter === s} style={{ ...pill(filter === s), display: "inline-flex", alignItems: "center", gap: 6 }}>{s !== "all" && <Dot color={filter === s ? "#fff" : STATUS_CONFIG[s].dot} size={7} />}{s === "all" ? "ทุกสถานะ" : STATUS_CONFIG[s].label}</button>
+        ))}
         <span style={{ flex: 1 }} />
-        <button onClick={() => setShowDone((v) => !v)} style={pill(showDone, "#3C3489", "#EEEDFE", "#534AB7")}>{showDone ? "ซ่อนงานเสร็จ" : "แสดงงานเสร็จ"}</button>
-        <button onClick={fetchTasks} style={pill(false, "", "", "")}>รีเฟรช</button>
+        <button onClick={() => setShowDone((v) => !v)} style={pill(showDone)}>{showDone ? "ซ่อนงานเสร็จ" : "แสดงงานเสร็จ"}</button>
+        <button onClick={fetchTasks} style={pill(false)}>รีเฟรช</button>
       </div>
 
       {adding && <AddTaskForm people={people} peopleErr={peopleErr} onClose={() => setAdding(false)} onAdded={(name) => { setNotice(`เพิ่มงาน “${name}” แล้ว`); setFilter("all"); fetchTasks(); }} />}
-      {notice && !adding && (() => { const ok = notice.startsWith("เพิ่ม") || notice.startsWith("บันทึกงาน") || notice.startsWith("ลบงาน"); return <p role="status" style={{ margin: "0 0 12px", fontSize: 13, color: ok ? "#27500A" : "#A32D2D", background: ok ? "#EAF3DE" : "#FCEBEB", border: `1px solid ${ok ? "#C0DD97" : "#F7C1C1"}`, borderRadius: 8, padding: "8px 12px" }}>{notice}</p>; })()}
+      {notice && !adding && (() => { const ok = notice.startsWith("เพิ่ม") || notice.startsWith("บันทึกงาน") || notice.startsWith("ลบงาน"); return <p role="status" style={{ margin: 0, fontSize: 13, color: ok ? "#1F5A2E" : "#B3200A", background: ok ? "#E3F1E6" : "#FDE8E4", border: `1px solid ${ok ? "#B9D9C0" : "#F5C0B8"}`, borderRadius: 14, padding: "9px 14px" }}>{notice}</p>; })()}
 
-      {loading && <p style={{ color: "#73726c", fontSize: 14 }}>กำลังโหลด...</p>}
-      {error   && <p role="alert" style={{ color: "#A32D2D", fontSize: 14, background: "#FCEBEB", border: "1px solid #F7C1C1", borderRadius: 8, padding: "8px 12px" }}>{error}</p>}
+      {loading && <p className="bn-empty">กำลังโหลด...</p>}
+      {error   && <p role="alert" className="bn-err">{error}</p>}
 
       {!loading && !error && (
         <>
@@ -359,15 +368,15 @@ export default function TasksPage() {
             {allStatuses.map((s) => {
               const cfg = STATUS_CONFIG[s];
               return (
-                <div key={s} style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, borderLeft: `5px solid ${cfg.dot}`, borderRadius: 10, padding: "8px 14px", color: cfg.color }}>
-                  <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2 }}>{byStatus(s).length}</div>
-                  <div style={{ fontSize: 12.5 }}>{cfg.label}</div>
+                <div key={s} style={{ background: "#fff", border: "1px solid #EBD9D2", borderRadius: 20, padding: "12px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#7A6A64" }}><Dot color={cfg.dot} size={8} />{cfg.label}</div>
+                  <div style={{ fontSize: 28, fontWeight: 600, lineHeight: 1.2, color: "#2A0B07" }}>{byStatus(s).length}</div>
                 </div>
               );
             })}
-            <div style={{ background: "#f6f5f0", border: "1px solid #D3CFC2", borderLeft: "5px solid #8a877b", borderRadius: 10, padding: "8px 14px", color: "#73726c" }}>
-              <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: "#1a1a18" }}>{tasks.length}</div>
-              <div style={{ fontSize: 12.5 }}>งานทั้งหมด</div>
+            <div style={{ background: "#2A0B07", borderRadius: 20, padding: "12px 16px", color: "#fff" }}>
+              <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.7)" }}>งานทั้งหมด</div>
+              <div style={{ fontSize: 28, fontWeight: 600, lineHeight: 1.2 }}>{tasks.length}</div>
             </div>
           </div>
           <div className={filter === "all" ? "tk-board" : "tk-board one"}>
