@@ -3,20 +3,33 @@
 import { useEffect, useState, useCallback } from "react";
 import type { FrydayTask, TaskStatus } from "@/lib/notion";
 
-const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; border: string }> = {
-  รอดำเนินการ: { label: "🔵 รอดำเนินการ", color: "#185FA5", bg: "#E6F1FB", border: "#B5D4F4" },
-  กำลังทำ:    { label: "🟡 กำลังทำ",     color: "#854F0B", bg: "#FAEEDA", border: "#FAC775" },
-  เสร็จแล้ว:  { label: "🟢 เสร็จแล้ว",   color: "#27500A", bg: "#EAF3DE", border: "#C0DD97" },
-  ติดปัญหา:   { label: "🔴 ติดปัญหา",    color: "#791F1F", bg: "#FCEBEB", border: "#F7C1C1" },
+const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; border: string; dot: string }> = {
+  รอดำเนินการ: { label: "รอดำเนินการ", color: "#185FA5", bg: "#E6F1FB", border: "#B5D4F4", dot: "#378ADD" },
+  กำลังทำ:    { label: "กำลังทำ",     color: "#854F0B", bg: "#FAEEDA", border: "#FAC775", dot: "#E0A526" },
+  เสร็จแล้ว:  { label: "เสร็จแล้ว",   color: "#27500A", bg: "#EAF3DE", border: "#C0DD97", dot: "#3B8B2E" },
+  ติดปัญหา:   { label: "ติดปัญหา",    color: "#791F1F", bg: "#FCEBEB", border: "#F7C1C1", dot: "#D4382A" },
 };
 
-const PRIORITY_BADGE: Record<string, string> = {
-  ด่วนมาก: "🔴", ปานกลาง: "🟠", ไม่เร่งด่วน: "🟢",
+// ความสำคัญ: ใช้ป้ายสีมีตัวหนังสือกำกับ (ไม่พึ่งสีอย่างเดียว)
+const PRIORITY_STYLE: Record<string, { color: string; bg: string; border: string }> = {
+  ด่วนมาก: { color: "#A32D2D", bg: "#FCEBEB", border: "#F7C1C1" },
+  ปานกลาง: { color: "#854F0B", bg: "#FAEEDA", border: "#FAC775" },
+  ไม่เร่งด่วน: { color: "#27500A", bg: "#EAF3DE", border: "#C0DD97" },
 };
 
-const CATEGORY_BADGE: Record<string, string> = {
-  ครัว: "🍗", การเงิน: "💰", การตลาด: "📣", ทั่วไป: "🧹", HR: "👥",
+// หมวดหมู่: แถบสีด้านซ้ายของการ์ด + ป้ายชื่อหมวด
+const CATEGORY_STYLE: Record<string, { bar: string; color: string; bg: string }> = {
+  ครัว: { bar: "#E07B1A", color: "#8A4A0B", bg: "#FDF0E3" },
+  การเงิน: { bar: "#3B8B2E", color: "#27500A", bg: "#EAF3DE" },
+  การตลาด: { bar: "#6A5FD6", color: "#3C3489", bg: "#EEEDFE" },
+  ทั่วไป: { bar: "#9A978B", color: "#5F5E5A", bg: "#F1EFE8" },
+  HR: { bar: "#1D9E75", color: "#0F6E56", bg: "#E1F5EE" },
 };
+const CAT_FALLBACK = CATEGORY_STYLE["ทั่วไป"];
+
+function Dot({ color, size = 8 }: { color: string; size?: number }) {
+  return <span aria-hidden="true" style={{ display: "inline-block", width: size, height: size, borderRadius: 99, background: color, flex: "none" }} />;
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -125,7 +138,7 @@ function EditModal({ task, people, peopleErr, onClose, onSaved }: {
       <div role="dialog" aria-label="แก้ไขงาน" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", width: "100%", maxWidth: 640, maxHeight: "92vh", overflow: "auto" }}>
         <p style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 500 }}>แก้ไขงาน</p>
         <Fields f={effective} setF={onChange} people={people} peopleErr={peopleErr} showStatus onEnter={save} />
-        {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D" }}>❌ {err}</p>}
+        {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D", background: "#FCEBEB", border: "1px solid #F7C1C1", borderRadius: 8, padding: "8px 10px" }}>{err}</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "center", flexWrap: "wrap" }}>
           <button onClick={del} disabled={busy} style={{ fontSize: 13.5, padding: "9px 16px", borderRadius: 99, border: "0.5px solid #F7C1C1", background: confirmDel ? "#FCEBEB" : "transparent", color: "#791F1F", cursor: "pointer" }}>{confirmDel ? "ยืนยันลบงาน" : "ลบงาน"}</button>
           <span style={{ flex: 1 }} />
@@ -144,34 +157,45 @@ function TaskCard({ task, onToggleDone, onChangeStatus, onEdit }: {
   onEdit: (task: FrydayTask) => void;
 }) {
   const overdue = isOverdue(task.deadline, task.done);
+  const cat = CATEGORY_STYLE[task.category] ?? CAT_FALLBACK;
+  const pri = PRIORITY_STYLE[task.priority];
+  const st = STATUS_CONFIG[task.status];
+  const chip: React.CSSProperties = { fontSize: 11.5, padding: "2px 8px", borderRadius: 6, border: "1px solid", whiteSpace: "nowrap", lineHeight: 1.5 };
   return (
-    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 10, padding: "12px 14px", opacity: task.done ? 0.55 : 1, transition: "opacity 0.2s", minWidth: 0 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+    <div style={{ background: "#fff", border: "1px solid #E7E2D6", borderLeft: `5px solid ${cat.bar}`, borderRadius: 10, opacity: task.done ? 0.55 : 1, transition: "opacity 0.2s", minWidth: 0, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px 10px" }}>
         <input type="checkbox" aria-label="ทำเสร็จแล้ว" checked={task.done} onChange={() => onToggleDone(task.id, !task.done)} style={{ marginTop: 3, width: 18, height: 18, flex: "none", cursor: "pointer", accentColor: "#1D9E75" }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 500, textDecoration: task.done ? "line-through" : "none", lineHeight: 1.4, overflowWrap: "anywhere" }}>
-            {CATEGORY_BADGE[task.category] ?? "📋"} {task.name}
-          </p>
-          <div style={{ display: "flex", gap: "2px 10px", marginTop: 4, flexWrap: "wrap", alignItems: "center" }}>
-            {task.assignee
-              ? <span style={{ fontSize: 12, color: "#73726c" }}>👤 {task.assignee}</span>
-              : <span style={{ fontSize: 12, color: "#aaa" }}>👤 ยังไม่มอบหมาย</span>}
-            {task.deadline && <span style={{ fontSize: 12, color: overdue ? "#A32D2D" : "#73726c", fontWeight: overdue ? 500 : 400 }}>{overdue ? "⚠️" : "📅"} {formatDate(task.deadline)}</span>}
-            <span style={{ fontSize: 12, color: "#73726c" }}>{PRIORITY_BADGE[task.priority]} {task.priority}</span>
+          <span style={{ ...chip, border: "none", background: cat.bg, color: cat.color, fontWeight: 600, marginBottom: 5, display: "inline-block" }}>{task.category}</span>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 600, textDecoration: task.done ? "line-through" : "none", lineHeight: 1.4, overflowWrap: "anywhere" }}>{task.name}</p>
+          <div style={{ display: "flex", gap: "6px 8px", marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ ...chip, borderColor: "#E7E2D6", color: task.assignee ? "#3a3933" : "#9a978b", display: "inline-flex", alignItems: "center", gap: 6, paddingLeft: 4 }}>
+              <span aria-hidden="true" style={{ width: 18, height: 18, borderRadius: 99, background: task.assignee ? cat.bar : "#D3D1C7", color: "#fff", fontSize: 10.5, fontWeight: 600, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{task.assignee ? task.assignee.trim().charAt(0).toUpperCase() : "?"}</span>
+              {task.assignee ?? "ยังไม่มอบหมาย"}
+            </span>
+            {task.deadline && (
+              <span style={{ ...chip, borderColor: overdue ? "#F7C1C1" : "#E7E2D6", background: overdue ? "#FCEBEB" : "#FBF9F3", color: overdue ? "#A32D2D" : "#5a5950", fontWeight: overdue ? 600 : 400 }}>
+                {overdue ? "เกินกำหนด " : "กำหนด "}{formatDate(task.deadline)}
+              </span>
+            )}
+            {pri && <span style={{ ...chip, color: pri.color, background: pri.bg, borderColor: pri.border, fontWeight: 500 }}>{task.priority}</span>}
           </div>
-          {task.note && <p style={{ margin: "6px 0 0", fontSize: 12.5, color: "#73726c", lineHeight: 1.5, overflowWrap: "anywhere" }}>{task.note}</p>}
+          {task.note && <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "#5a5950", lineHeight: 1.5, overflowWrap: "anywhere", background: "#FBF9F3", border: "1px solid #EFEADC", borderRadius: 6, padding: "6px 8px" }}>{task.note}</p>}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-      <select
-        aria-label="เปลี่ยนสถานะ"
-        value={task.status}
-        onChange={(e) => onChangeStatus(task.id, e.target.value as TaskStatus)}
-        style={{ flex: 1, minWidth: 0, font: "inherit", fontSize: 12.5, padding: "6px 8px", borderRadius: 8, border: `0.5px solid ${STATUS_CONFIG[task.status].border}`, background: STATUS_CONFIG[task.status].bg, color: STATUS_CONFIG[task.status].color, cursor: "pointer" }}
-      >
-        {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
-      </select>
-      <button onClick={() => onEdit(task)} aria-label={`แก้ไขงาน ${task.name}`} style={{ flex: "none", font: "inherit", fontSize: 12.5, padding: "6px 12px", borderRadius: 8, border: "0.5px solid #d3d1c7", background: "#fff", color: "#444", cursor: "pointer" }}>✏️ แก้ไข</button>
+      <div style={{ display: "flex", gap: 6, padding: "8px 14px", borderTop: "1px solid #EFEADC", background: "#FBF9F3" }}>
+        <span style={{ position: "relative", flex: 1, minWidth: 0, display: "flex" }}>
+          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", display: "flex" }}><Dot color={st.dot} /></span>
+          <select
+            aria-label="เปลี่ยนสถานะ"
+            value={task.status}
+            onChange={(e) => onChangeStatus(task.id, e.target.value as TaskStatus)}
+            style={{ flex: 1, minWidth: 0, font: "inherit", fontSize: 12.5, padding: "6px 8px 6px 26px", borderRadius: 8, border: `1px solid ${st.border}`, background: st.bg, color: st.color, cursor: "pointer", fontWeight: 500 }}
+          >
+            {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
+          </select>
+        </span>
+        <button onClick={() => onEdit(task)} aria-label={`แก้ไขงาน ${task.name}`} style={{ flex: "none", font: "inherit", fontSize: 12.5, padding: "6px 14px", borderRadius: 8, border: "1px solid #d3cab4", background: "#fff", color: "#3a3933", cursor: "pointer", fontWeight: 500 }}>แก้ไข</button>
       </div>
     </div>
   );
@@ -185,13 +209,14 @@ function Column({ status, tasks, onToggleDone, onChangeStatus, onEdit }: {
 }) {
   const cfg = STATUS_CONFIG[status];
   return (
-    <section aria-label={cfg.label} style={{ background: "#f6f5f0", borderRadius: 12, padding: 10, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 4px 4px" }}>
-        <span style={{ fontSize: 12.5, fontWeight: 500, color: cfg.color, background: cfg.bg, border: `0.5px solid ${cfg.border}`, borderRadius: 99, padding: "2px 10px" }}>{cfg.label}</span>
-        <span style={{ fontSize: 12, color: "#73726c", marginLeft: "auto" }}>{tasks.length} งาน</span>
+    <section aria-label={cfg.label} style={{ background: cfg.bg + "88", border: `1px solid ${cfg.border}`, borderTop: `4px solid ${cfg.dot}`, borderRadius: 12, padding: 10, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 4px 6px" }}>
+        <Dot color={cfg.dot} size={10} />
+        <span style={{ fontSize: 14, fontWeight: 600, color: cfg.color }}>{cfg.label}</span>
+        <span style={{ fontSize: 12, color: cfg.color, marginLeft: "auto", background: "#fff", border: `1px solid ${cfg.border}`, borderRadius: 99, padding: "1px 10px", fontWeight: 500 }}>{tasks.length}</span>
       </div>
       {tasks.length === 0
-        ? <p style={{ textAlign: "center", fontSize: 12.5, color: "#aaa", margin: 0, padding: "28px 0", border: "1px dashed #d3d1c7", borderRadius: 10 }}>ไม่มีงาน</p>
+        ? <p style={{ textAlign: "center", fontSize: 12.5, color: "#8a877b", margin: 0, padding: "28px 0", border: `1px dashed ${cfg.border}`, borderRadius: 10, background: "#ffffff99" }}>ไม่มีงาน</p>
         : tasks.map((t) => <TaskCard key={t.id} task={t} onToggleDone={onToggleDone} onChangeStatus={onChangeStatus} onEdit={onEdit} />)
       }
     </section>
@@ -221,8 +246,8 @@ function AddTaskForm({ people, peopleErr, onClose, onAdded }: { people: Person[]
     <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 18px", marginBottom: 16 }}>
       <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 500 }}>เพิ่มงานใหม่</p>
       <Fields f={f} setF={setF} people={people} peopleErr={peopleErr} showStatus={false} onEnter={submit} />
-      {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D" }}>❌ {err}</p>}
-      {added && <p role="status" style={{ margin: "10px 0 0", fontSize: 13, color: "#27500A" }}>✓ เพิ่มงาน “{added}” แล้ว กรอกต่อเพื่อเพิ่มงานถัดไปได้</p>}
+      {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D", background: "#FCEBEB", border: "1px solid #F7C1C1", borderRadius: 8, padding: "8px 10px" }}>{err}</p>}
+      {added && <p role="status" style={{ margin: "10px 0 0", fontSize: 13, color: "#27500A", background: "#EAF3DE", border: "1px solid #C0DD97", borderRadius: 8, padding: "8px 10px" }}>เพิ่มงาน “{added}” แล้ว กรอกต่อเพื่อเพิ่มงานถัดไปได้</p>}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button onClick={submit} disabled={busy} style={{ fontSize: 14, padding: "9px 22px", borderRadius: 99, border: "none", background: "#C0200A", color: "#fff", cursor: "pointer", fontWeight: 600, opacity: busy ? 0.6 : 1 }}>{busy ? "กำลังบันทึก…" : "บันทึกงาน"}</button>
         <button onClick={onClose} style={{ fontSize: 14, padding: "9px 18px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>ปิด</button>
@@ -274,7 +299,7 @@ export default function TasksPage() {
     finally { setLoading(false); }
   }, [filter, showDone]);
 
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  useEffect(() => { queueMicrotask(fetchTasks); }, [fetchTasks]);
 
   useEffect(() => {
     let off = false;
@@ -308,25 +333,25 @@ export default function TasksPage() {
     <main style={{ padding: "24px 20px 60px", maxWidth: 1280, margin: "0 auto" }}>
       <style>{LAYOUT_CSS}</style>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 500, margin: 0 }}>🍗 Fryday — Task Manager</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>งานของร้าน Fryday</h1>
         <button onClick={() => { setAdding((v) => !v); setNotice(""); }} aria-expanded={adding} style={{ marginLeft: "auto", fontSize: 14, padding: "9px 20px", borderRadius: 99, border: "none", background: "#C0200A", color: "#fff", cursor: "pointer", fontWeight: 600 }}>{adding ? "ปิดฟอร์ม" : "+ เพิ่มงาน"}</button>
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         {(["all", ...allStatuses] as const).map((s) => {
           const c = s === "all" ? { color: "#27500A", bg: "#EAF3DE", border: "#1D9E75" } : STATUS_CONFIG[s];
-          return <button key={s} onClick={() => setFilter(s)} style={pill(filter === s, c.color, c.bg, c.border)}>{s === "all" ? "ทุกสถานะ" : STATUS_CONFIG[s].label}</button>;
+          return <button key={s} onClick={() => setFilter(s)} aria-pressed={filter === s} style={{ ...pill(filter === s, c.color, c.bg, c.border), display: "inline-flex", alignItems: "center", gap: 6 }}>{s !== "all" && <Dot color={STATUS_CONFIG[s].dot} size={7} />}{s === "all" ? "ทุกสถานะ" : STATUS_CONFIG[s].label}</button>;
         })}
         <span style={{ flex: 1 }} />
         <button onClick={() => setShowDone((v) => !v)} style={pill(showDone, "#3C3489", "#EEEDFE", "#534AB7")}>{showDone ? "ซ่อนงานเสร็จ" : "แสดงงานเสร็จ"}</button>
-        <button onClick={fetchTasks} style={pill(false, "", "", "")}>🔄 รีเฟรช</button>
+        <button onClick={fetchTasks} style={pill(false, "", "", "")}>รีเฟรช</button>
       </div>
 
       {adding && <AddTaskForm people={people} peopleErr={peopleErr} onClose={() => setAdding(false)} onAdded={(name) => { setNotice(`เพิ่มงาน “${name}” แล้ว`); setFilter("all"); fetchTasks(); }} />}
-      {notice && !adding && <p role="status" style={{ margin: "0 0 12px", fontSize: 13, color: notice.startsWith("เพิ่ม") ? "#27500A" : "#A32D2D" }}>{notice}</p>}
+      {notice && !adding && (() => { const ok = notice.startsWith("เพิ่ม") || notice.startsWith("บันทึกงาน") || notice.startsWith("ลบงาน"); return <p role="status" style={{ margin: "0 0 12px", fontSize: 13, color: ok ? "#27500A" : "#A32D2D", background: ok ? "#EAF3DE" : "#FCEBEB", border: `1px solid ${ok ? "#C0DD97" : "#F7C1C1"}`, borderRadius: 8, padding: "8px 12px" }}>{notice}</p>; })()}
 
       {loading && <p style={{ color: "#73726c", fontSize: 14 }}>กำลังโหลด...</p>}
-      {error   && <p style={{ color: "#A32D2D", fontSize: 14 }}>❌ {error}</p>}
+      {error   && <p role="alert" style={{ color: "#A32D2D", fontSize: 14, background: "#FCEBEB", border: "1px solid #F7C1C1", borderRadius: 8, padding: "8px 12px" }}>{error}</p>}
 
       {!loading && !error && (
         <>
@@ -334,13 +359,13 @@ export default function TasksPage() {
             {allStatuses.map((s) => {
               const cfg = STATUS_CONFIG[s];
               return (
-                <div key={s} style={{ background: cfg.bg, border: `0.5px solid ${cfg.border}`, borderRadius: 10, padding: "8px 14px", color: cfg.color }}>
+                <div key={s} style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, borderLeft: `5px solid ${cfg.dot}`, borderRadius: 10, padding: "8px 14px", color: cfg.color }}>
                   <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2 }}>{byStatus(s).length}</div>
-                  <div style={{ fontSize: 12.5 }}>{cfg.label.replace(/^[^\s]+\s/, "")}</div>
+                  <div style={{ fontSize: 12.5 }}>{cfg.label}</div>
                 </div>
               );
             })}
-            <div style={{ background: "#f6f5f0", border: "0.5px solid #e5e3db", borderRadius: 10, padding: "8px 14px", color: "#73726c" }}>
+            <div style={{ background: "#f6f5f0", border: "1px solid #D3CFC2", borderLeft: "5px solid #8a877b", borderRadius: 10, padding: "8px 14px", color: "#73726c" }}>
               <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: "#1a1a18" }}>{tasks.length}</div>
               <div style={{ fontSize: 12.5 }}>งานทั้งหมด</div>
             </div>
