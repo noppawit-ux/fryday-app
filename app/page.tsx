@@ -120,30 +120,6 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Finance */}
-        <div style={card}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <p style={sectionTitle}>💰 การเงินเดือนนี้</p>
-            <a href="https://fryday-accounting-dashboard.vercel.app" target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#C0200A", textDecoration: "none", fontWeight: 500 }}>ดูทั้งหมด ↗</a>
-          </div>
-          {loading || !summary
-            ? <p style={{ fontSize: 13, color: "#aaa", margin: 0 }}>กำลังโหลด...</p>
-            : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {[
-                  { label: "รายรับ",     value: summary.totalRevenue,   bg: "#E8F5E9", color: "#27500A" },
-                  { label: "รายจ่าย",   value: summary.totalExpense,   bg: "#FEE9E7", color: "#C0200A" },
-                  { label: "กำไรสุทธิ", value: summary.netProfit,      bg: summary.netProfit >= 0 ? "#E8F5E9" : "#FEE9E7", color: summary.netProfit >= 0 ? "#27500A" : "#C0200A" },
-                  { label: "ส่วนแบ่ง/คน", value: summary.sharePerPerson, bg: "#EDE9FE", color: "#3C3489" },
-                ].map((s) => (
-                  <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: "10px 12px" }}>
-                    <p style={{ margin: "0 0 2px", fontSize: 11, color: s.color, opacity: 0.75 }}>{s.label}</p>
-                    <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: s.color }}>฿{formatBaht(s.value)}</p>
-                  </div>
-                ))}
-              </div>
-          }
-        </div>
-
         {/* Tasks */}
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
