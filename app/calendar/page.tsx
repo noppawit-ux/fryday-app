@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import "../bento.css";
 import { buildIcs, downloadIcs } from "../marketing/planner/ics";
 
 interface CalendarItem {
@@ -20,9 +21,9 @@ interface CalendarItem {
 }
 
 const TYPE_STYLE = {
-  task:      { bg: "#FEE9E7", color: "#C0200A", border: "#F5C0B8", icon: "📋", label: "งาน" },
-  event:     { bg: "#EAF3DE", color: "#27500A", border: "#C0DD97", icon: "📅", label: "กิจกรรม" },
-  marketing: { bg: "#EEEDFE", color: "#3C3489", border: "#CECBF6", icon: "📣", label: "Marketing" },
+  task:      { bg: "#FDE1DA", color: "#B3200A", border: "#F5C0B8", icon: "", label: "งาน" },
+  event:     { bg: "#E3F1E6", color: "#1F5A2E", border: "#B9D9C0", icon: "", label: "กิจกรรม" },
+  marketing: { bg: "#2A0B07", color: "#FFD9CE", border: "#2A0B07", icon: "", label: "โพสต์" },
 };
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -84,7 +85,7 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "flex-end" }}
       onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", padding: "20px 16px 32px", width: "100%", maxHeight: "70vh", overflowY: "auto" }}
+      <div style={{ background: "#fff", borderRadius: "26px 26px 0 0", padding: "20px 18px 32px", width: "100%", maxHeight: "70vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}>
         {/* Handle */}
         <div style={{ width: 40, height: 4, background: "#e0e0e0", borderRadius: 99, margin: "0 auto 16px" }} />
@@ -92,7 +93,7 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
         {/* Type badge */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99, background: s.bg, color: s.color, border: `0.5px solid ${s.border}`, fontWeight: 600 }}>
-            {s.icon} {s.label}
+            {s.label}
           </span>
           {item.priority && (
             <span style={{ fontSize: 11, color: PRIORITY_COLOR[item.priority] ?? "#666", fontWeight: 500 }}>
@@ -100,7 +101,7 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
             </span>
           )}
           {isOverdue && item.type === "task" && (
-            <span style={{ fontSize: 11, color: "#C0200A", fontWeight: 600 }}>⚠️ เกิน Deadline</span>
+            <span style={{ fontSize: 11, color: "#C0200A", fontWeight: 600 }}>เกินกำหนด</span>
           )}
         </div>
 
@@ -111,8 +112,7 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
 
         {/* Details */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#faf9f5", borderRadius: 10 }}>
-            <span style={{ fontSize: 16 }}>📅</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#FBF4F0", borderRadius: 14 }}>
             <div>
               <p style={{ margin: 0, fontSize: 11, color: "#73726c" }}>วันที่</p>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: isOverdue && item.type === "task" ? "#C0200A" : "#1a1a18" }}>
@@ -122,8 +122,7 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
           </div>
 
           {item.status && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#faf9f5", borderRadius: 10 }}>
-              <span style={{ fontSize: 16 }}>🔄</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#FBF4F0", borderRadius: 14 }}>
               <div>
                 <p style={{ margin: 0, fontSize: 11, color: "#73726c" }}>สถานะ</p>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>{item.status}</p>
@@ -132,8 +131,7 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
           )}
 
           {item.assignee && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#faf9f5", borderRadius: 10 }}>
-              <span style={{ fontSize: 16 }}>👤</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#FBF4F0", borderRadius: 14 }}>
               <div>
                 <p style={{ margin: 0, fontSize: 11, color: "#73726c" }}>ผู้รับผิดชอบ</p>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>{item.assignee}</p>
@@ -142,8 +140,7 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
           )}
 
           {item.category && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#faf9f5", borderRadius: 10 }}>
-              <span style={{ fontSize: 16 }}>🏷️</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#FBF4F0", borderRadius: 14 }}>
               <div>
                 <p style={{ margin: 0, fontSize: 11, color: "#73726c" }}>หมวดหมู่</p>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>{item.category}</p>
@@ -152,8 +149,7 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
           )}
 
           {item.channel && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#faf9f5", borderRadius: 10 }}>
-              <span style={{ fontSize: 16 }}>📡</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#FBF4F0", borderRadius: 14 }}>
               <div>
                 <p style={{ margin: 0, fontSize: 11, color: "#73726c" }}>ช่องทาง</p>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>{item.channel}</p>
@@ -162,8 +158,8 @@ function DetailCard({ item, onClose }: { item: CalendarItem; onClose: () => void
           )}
 
           {item.note && (
-            <div style={{ padding: "10px 12px", background: "#faf9f5", borderRadius: 10 }}>
-              <p style={{ margin: "0 0 4px", fontSize: 11, color: "#73726c" }}>📝 หมายเหตุ</p>
+            <div style={{ padding: "10px 12px", background: "#FBF4F0", borderRadius: 14 }}>
+              <p style={{ margin: "0 0 4px", fontSize: 11, color: "#73726c" }}>หมายเหตุ</p>
               <p style={{ margin: 0, fontSize: 14, color: "#1a1a18", lineHeight: 1.5 }}>{item.note}</p>
             </div>
           )}
@@ -200,7 +196,7 @@ function DayCell({ date, items, isCurrentMonth, isToday, isSelected, onClick }: 
         const s = TYPE_STYLE[item.type];
         return (
           <div key={item.id} className="cal-chip" style={{ background: s.bg, color: s.color }}>
-            {s.icon} {item.title.replace(/^คลิป (\d+):.*/, "คลิป $1")}
+            {item.title.replace(/^คลิป (\d+):.*/, "คลิป $1")}
           </div>
         );
       })}
@@ -219,9 +215,9 @@ function DayPanel({ date, items, onSelectItem }: {
   const isToday = formatDateKey(date) === today;
 
   return (
-    <div style={{ background: "#fff", borderRadius: 14, border: "0.5px solid #e5e3db", overflow: "hidden", marginTop: 12 }}>
+    <div style={{ background: "#fff", borderRadius: 22, border: "1px solid #EBD9D2", overflow: "hidden", marginTop: 12 }}>
       {/* Header */}
-      <div style={{ background: isToday ? "#C0200A" : "#f6f5f0", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ background: isToday ? "#2A0B07" : "#FBF4F0", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: isToday ? "#fff" : "#1a1a18" }}>{dateStr}</p>
         <span style={{ fontSize: 12, color: isToday ? "rgba(255,255,255,0.8)" : "#73726c" }}>{items.length} รายการ</span>
       </div>
@@ -244,9 +240,7 @@ function DayPanel({ date, items, onSelectItem }: {
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#faf9f5")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-                  {s.icon}
-                </div>
+                <div style={{ width: 4, alignSelf: "stretch", minHeight: 30, borderRadius: 99, background: item.type === "marketing" ? "#2A0B07" : s.color, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 500, color: "#1a1a18", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {item.title}
@@ -254,8 +248,8 @@ function DayPanel({ date, items, onSelectItem }: {
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: s.bg, color: s.color }}>{s.label}</span>
                     {item.status && <span style={{ fontSize: 10, color: "#73726c" }}>{item.status}</span>}
-                    {item.assignee && <span style={{ fontSize: 10, color: "#73726c" }}>👤 {item.assignee}</span>}
-                    {overdue && <span style={{ fontSize: 10, color: "#C0200A", fontWeight: 600 }}>⚠️ เกิน!</span>}
+                    {item.assignee && <span style={{ fontSize: 10, color: "#73726c" }}>{item.assignee}</span>}
+                    {overdue && <span style={{ fontSize: 10, color: "#C0200A", fontWeight: 600 }}>เกิน</span>}
                   </div>
                 </div>
                 <span style={{ fontSize: 16, color: "#d3d1c7" }}>›</span>
@@ -314,7 +308,7 @@ export default function CalendarPage() {
     setExpMsg(`สร้างไฟล์แล้ว ${count} รายการ เปิดไฟล์ที่ดาวน์โหลดเพื่อเพิ่มลงปฏิทิน`);
   };
 
-  const FILTERS = { all: "ทั้งหมด", task: "📋 งาน", marketing: "📣 Marketing" } as const;
+  const FILTERS = { all: "ทั้งหมด", task: "งาน", marketing: "โพสต์" } as const;
 
   return (
     <>
@@ -333,11 +327,11 @@ export default function CalendarPage() {
             ))}
           </div>
           <div className="cal-sum">
-            <span style={{ background: "#FEE9E7", color: "#C0200A" }}>📋 {monthItems.filter(i => i.type === "task").length} งาน</span>
-            <span style={{ background: "#EEEDFE", color: "#3C3489" }}>📣 {monthItems.filter(i => i.type === "marketing").length} โพสต์</span>
+            <span style={{ background: "#FDE1DA", color: "#B3200A" }}>{monthItems.filter(i => i.type === "task").length} งาน</span>
+            <span style={{ background: "#2A0B07", color: "#FFD9CE" }}>{monthItems.filter(i => i.type === "marketing").length} โพสต์</span>
             {loading && <em>กำลังโหลด…</em>}
           </div>
-          <button className="cal-export" aria-expanded={exp} onClick={() => { setExp((v) => !v); setExpMsg(""); }}>📲 ลงปฏิทินมือถือ</button>
+          <button className="cal-export" aria-expanded={exp} onClick={() => { setExp((v) => !v); setExpMsg(""); }}>ลงปฏิทินมือถือ</button>
         </div>
 
         {exp && (
@@ -358,7 +352,7 @@ export default function CalendarPage() {
           <section className="cal-main" aria-label="ปฏิทินรายเดือน">
             <div className="cal-grid">
               {DAY_TH.map((d, i) => (
-                <div key={d} className="cal-dow" style={{ color: i === 0 ? "#C0200A" : i === 6 ? "#185FA5" : "#73726c" }}>{d}</div>
+                <div key={d} className="cal-dow" style={{ color: i === 0 ? "#C0200A" : i === 6 ? "#8F1B0B" : "#7A6A64" }}>{d}</div>
               ))}
               {days.map((d, idx) => {
                 const key = formatDateKey(d);
@@ -380,7 +374,7 @@ export default function CalendarPage() {
               : <p className="cal-hint">เลือกวันในปฏิทินเพื่อดูรายการ</p>}
             <div className="cal-legend">
               {(Object.entries(TYPE_STYLE) as [keyof typeof TYPE_STYLE, typeof TYPE_STYLE[keyof typeof TYPE_STYLE]][]).map(([k, s]) => (
-                <div key={k}><i style={{ background: s.bg, border: `0.5px solid ${s.border}` }} />{s.icon} {s.label}</div>
+                <div key={k}><i style={{ background: s.bg, border: `0.5px solid ${s.border}` }} />{s.label}</div>
               ))}
             </div>
           </aside>
@@ -392,45 +386,45 @@ export default function CalendarPage() {
 
       <style>{`
         * { box-sizing: border-box; }
-        body { background: #FBF8F5; -webkit-font-smoothing: antialiased; }
-        .cal { --red:#C0200A; --line:#E7E2D6; max-width: 1180px; margin: 0 auto; padding: 16px 16px 40px; color: #2a2118; }
+        body { background: #F7EFEA !important; -webkit-font-smoothing: antialiased; }
+        .cal { --red:#C0200A; --ink:#2A0B07; --line:#EBD9D2; max-width: 1180px; margin: 0 auto; padding: 16px 16px 40px; color: var(--ink); }
         .cal button { font: inherit; transition: background-color .15s, border-color .15s, filter .15s; }
         .cal button:not(:disabled):hover { filter: brightness(.97); }
         .cal button:disabled { opacity: .5; cursor: not-allowed; }
         .cal button:focus-visible, .cal input:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
-        .cal-top { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; }
+        .cal-top { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; background: radial-gradient(120% 160% at 100% 0%, #8F1B0B 0%, #4A0F08 55%, #2A0B07 100%); color: #fff; border-radius: 24px; padding: 12px 18px; }
         .cal-nav { display: flex; align-items: center; gap: 6px; }
-        .cal-nav h1 { margin: 0; font-size: 20px; font-weight: 700; min-width: 150px; text-align: center; }
-        .cal-nav button, .cal-export { font-size: 14px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; color: #2a2118; }
-        .cal-nav .cal-today { font-size: 12px; color: var(--red); font-weight: 600; }
+        .cal-nav h1 { margin: 0; font-size: 20px; font-weight: 600; min-width: 150px; text-align: center; }
+        .cal-nav button, .cal-export { font-size: 14px; padding: 6px 14px; border: 1px solid rgba(255,255,255,.28); border-radius: 99px; background: transparent; cursor: pointer; color: #fff; }
+        .cal-nav .cal-today { font-size: 12px; background: #FF8A66; border-color: #FF8A66; color: #3A0D06; font-weight: 600; }
         .cal-export { margin-left: auto; font-weight: 600; font-size: 13px; }
-        .cal-seg { display: flex; background: #ebe6d9; border-radius: 10px; padding: 3px; gap: 2px; }
-        .cal-seg button { border: none; background: transparent; font-size: 13px; padding: 5px 12px; border-radius: 8px; cursor: pointer; color: #2a2118; white-space: nowrap; }
-        .cal-seg button[aria-pressed="true"] { background: var(--red); color: #fff; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+        .cal-seg { display: flex; background: rgba(255,255,255,.1); border-radius: 99px; padding: 3px; gap: 2px; }
+        .cal-seg button { border: none; background: transparent; font-size: 13px; padding: 5px 14px; border-radius: 99px; cursor: pointer; color: rgba(255,255,255,.8); white-space: nowrap; }
+        .cal-seg button[aria-pressed="true"] { background: #fff; color: var(--ink); font-weight: 600; }
         .cal-sum { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .cal-sum span { font-size: 12px; padding: 3px 10px; border-radius: 99px; font-weight: 500; }
-        .cal-sum em { font-size: 12px; color: #73726c; font-style: normal; }
-        .cal-exp { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; }
+        .cal-sum em { font-size: 12px; color: rgba(255,255,255,.7); font-style: normal; }
+        .cal-exp { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; }
         .cal-exp-opts { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
-        .cal-primary { background: var(--red); color: #fff; border: 1px solid var(--red); border-radius: 8px; padding: 7px 14px; font-weight: 600; cursor: pointer; font-size: 13px; }
+        .cal-primary { background: var(--red); color: #fff; border: 1px solid var(--red); border-radius: 99px; padding: 8px 18px; font-weight: 600; cursor: pointer; font-size: 13px; }
         .cal-exp p { margin: 8px 0 0; }
         .cal-exp small { display: block; margin-top: 8px; color: #73726c; font-size: 12px; }
         .cal-body { display: flex; gap: 16px; align-items: flex-start; }
-        .cal-main { flex: 2 1 0; min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+        .cal-main { flex: 2 1 0; min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 24px; padding: 14px 16px; }
         .cal-side { flex: 1 1 0; min-width: 280px; max-width: 420px; }
         .cal-side > div:first-child { margin-top: 0 !important; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
         .cal-dow { text-align: center; font-size: 12px; font-weight: 600; padding: 2px 0 4px; }
-        .cal-cell { min-height: 78px; text-align: left; padding: 5px 4px 3px; border-radius: 10px; background: #fff; border: 1px solid var(--line); cursor: pointer; overflow: hidden; color: inherit; display: block; width: 100%; }
-        .cal-cell.weekend { background: #FBF9F3; }
+        .cal-cell { min-height: 78px; text-align: left; padding: 5px 4px 3px; border-radius: 14px; background: #fff; border: 1px solid var(--line); cursor: pointer; overflow: hidden; color: inherit; display: block; width: 100%; }
+        .cal-cell.weekend { background: #FBF4F0; }
         .cal-cell.other { opacity: .4; }
-        .cal-cell.sel { border-color: var(--red); background: #FFF3EE; box-shadow: 0 0 0 1px var(--red) inset; }
+        .cal-cell.sel { border-color: var(--ink); background: #FDE8E4; box-shadow: 0 0 0 1px var(--ink) inset; }
         .cal-num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 99px; font-size: 12px; margin-bottom: 2px; }
-        .cal-num.today { background: var(--red); color: #fff; font-weight: 700; }
+        .cal-num.today { background: var(--ink); color: #fff; font-weight: 700; }
         .cal-count { display: none; font-size: 10px; color: #73726c; margin-left: 4px; }
-        .cal-chip { font-size: 10px; padding: 1px 4px; border-radius: 4px; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
+        .cal-chip { font-size: 10px; padding: 1px 6px; border-radius: 99px; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
         .cal-more { font-size: 10px; color: var(--red); padding-left: 3px; font-weight: 500; }
-        .cal-hint { margin: 0; padding: 20px; text-align: center; font-size: 13px; color: #73726c; background: #fff; border: 1px dashed var(--line); border-radius: 14px; }
+        .cal-hint { margin: 0; padding: 20px; text-align: center; font-size: 13px; color: #73726c; background: #fff; border: 1px dashed var(--line); border-radius: 22px; }
         .cal-legend { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
         .cal-legend div { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #73726c; }
         .cal-legend i { display: block; width: 10px; height: 10px; border-radius: 3px; }

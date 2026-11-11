@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import "../bento.css";
 
 interface Campaign {
   id: string;
@@ -30,24 +31,16 @@ const STATUS_LIST = ["ไอเดีย", "ยังไม่ถ่าย", "�
 const CONTENT_TYPES = ["รูปภาพ", "Reel/Video", "โปรโมชัน", "Story", "Giveaway"];
 const CHANNELS = ["Facebook", "Instagram", "TikTok", "YouTube Shorts", "Instagram Reels", "Facebook Reels", "Line OA", "Shopee Food", "GrabFood"];
 
-const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  ไอเดีย:      { bg: "#F1EFE8", color: "#5F5E5A", border: "#D3D1C7" },
-  กำลังสร้าง:  { bg: "#FAEEDA", color: "#854F0B", border: "#FAC775" },
-  รออนุมัติ:   { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
-  โพสต์แล้ว:  { bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" },
-  วัดผล:       { bg: "#EEEDFE", color: "#3C3489", border: "#CECBF6" },
-  ยังไม่ถ่าย:   { bg: "#F1EFE8", color: "#5F5E5A", border: "#D3D1C7" },
-  ถ่ายแล้ว:    { bg: "#FAEEDA", color: "#854F0B", border: "#FAC775" },
-  ตัดต่อแล้ว:   { bg: "#FBEAF0", color: "#72243E", border: "#F4C0D1" },
-  ตั้งเวลาแล้ว: { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
-};
-
-const CONTENT_ICON: Record<string, string> = {
-  รูปภาพ: "📸", "Reel/Video": "🎬", โปรโมชัน: "📣", Story: "📝", Giveaway: "🎁",
-};
-
-const CHANNEL_ICON: Record<string, string> = {
-  Facebook: "f", Instagram: "ig", TikTok: "tt", "Line OA": "L", "Shopee Food": "sf", GrabFood: "G",
+const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
+  ไอเดีย:      { bg: "#F1EBE7", color: "#6B5A54" },
+  ยังไม่ถ่าย:   { bg: "#F1EBE7", color: "#6B5A54" },
+  ถ่ายแล้ว:    { bg: "#FFF0D6", color: "#8A5300" },
+  ตัดต่อแล้ว:   { bg: "#FDE1EA", color: "#8A1F45" },
+  กำลังสร้าง:  { bg: "#FFF0D6", color: "#8A5300" },
+  รออนุมัติ:   { bg: "#FDE8E4", color: "#B3200A" },
+  ตั้งเวลาแล้ว: { bg: "#FBD3C7", color: "#8F1B0B" },
+  โพสต์แล้ว:  { bg: "#E3F1E6", color: "#1F5A2E" },
+  วัดผล:       { bg: "#2A0B07", color: "#fff" },
 };
 
 function formatBaht(n: number) {
@@ -63,16 +56,6 @@ function formatNum(n: number) {
 function formatDate(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-}
-
-function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
-  return (
-    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "14px 18px", flex: "1 1 130px" }}>
-      <p style={{ margin: "0 0 5px", fontSize: 12, color: "#73726c" }}>{label}</p>
-      <p style={{ margin: 0, fontSize: 22, fontWeight: 500, color: color ?? "#1a1a18" }}>{value}</p>
-      {sub && <p style={{ margin: "3px 0 0", fontSize: 11, color: "#73726c" }}>{sub}</p>}
-    </div>
-  );
 }
 
 function AddCampaignForm({ onAdded }: { onAdded: () => void }) {
@@ -105,72 +88,59 @@ function AddCampaignForm({ onAdded }: { onAdded: () => void }) {
     onAdded();
   };
 
-  const inp: React.CSSProperties = { width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #d3d1c7", background: "#faf9f5", color: "#1a1a18", boxSizing: "border-box" };
-
   if (!open) return (
-    <button onClick={() => setOpen(true)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "#fff", color: "#1a1a18", cursor: "pointer", marginBottom: 16 }}>
-      + เพิ่มแคมเปญ
-    </button>
+    <div><button className="bn-btn" onClick={() => setOpen(true)}>+ เพิ่มแคมเปญ</button></div>
   );
 
   return (
-    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 20px", marginBottom: 16 }}>
-      <p style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>เพิ่มแคมเปญใหม่</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div style={{ gridColumn: "1/-1" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>ชื่อแคมเปญ/โพสต์ *</p>
-          <input style={inp} placeholder="เช่น โปรซื้อ 2 แถม 1 วันศุกร์" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+    <div className="bn-card">
+      <div className="bn-head"><h2>เพิ่มแคมเปญใหม่</h2></div>
+      <div className="bn-form">
+        <div className="full">
+          <label>ชื่อแคมเปญ/โพสต์ *</label>
+          <input className="bn-in" placeholder="เช่น โปรซื้อ 2 แถม 1 วันศุกร์" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>ประเภท Content</p>
-          <select style={inp} value={form.contentType} onChange={(e) => setForm((f) => ({ ...f, contentType: e.target.value }))}>
+          <label>ประเภท Content</label>
+          <select className="bn-in" value={form.contentType} onChange={(e) => setForm((f) => ({ ...f, contentType: e.target.value }))}>
             {CONTENT_TYPES.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>สถานะ</p>
-          <select style={inp} value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+          <label>สถานะ</label>
+          <select className="bn-in" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
             {STATUS_LIST.map((s) => <option key={s}>{s}</option>)}
           </select>
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>วันที่โพสต์</p>
-          <input style={inp} type="date" value={form.postDate} onChange={(e) => setForm((f) => ({ ...f, postDate: e.target.value }))} />
+          <label>วันที่โพสต์</label>
+          <input className="bn-in" type="date" value={form.postDate} onChange={(e) => setForm((f) => ({ ...f, postDate: e.target.value }))} />
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>งบประมาณ (บาท)</p>
-          <input style={inp} type="number" placeholder="0" value={form.budget} onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))} />
+          <label>งบประมาณ (บาท)</label>
+          <input className="bn-in" type="number" placeholder="0" value={form.budget} onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))} />
         </div>
-        <div style={{ gridColumn: "1/-1" }}>
-          <p style={{ margin: "0 0 6px", fontSize: 12, color: "#73726c" }}>ช่องทาง</p>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {CHANNELS.map((ch) => {
-              const active = selChannels.includes(ch);
-              return (
-                <button key={ch} onClick={() => toggleChannel(ch)} style={{ fontSize: 12, padding: "4px 12px", borderRadius: 99, border: `0.5px solid ${active ? "#534AB7" : "#d3d1c7"}`, background: active ? "#EEEDFE" : "transparent", color: active ? "#3C3489" : "#73726c", cursor: "pointer" }}>
-                  {ch}
-                </button>
-              );
-            })}
+        <div className="full">
+          <label>ช่องทาง</label>
+          <div className="bn-pills">
+            {CHANNELS.map((ch) => (
+              <button type="button" key={ch} className="bn-pill" aria-pressed={selChannels.includes(ch)} onClick={() => toggleChannel(ch)}>{ch}</button>
+            ))}
           </div>
         </div>
-        <div style={{ gridColumn: "1/-1" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>รายละเอียด / สคริปต์ (เก็บไว้ในหน้าแคมเปญ)</p>
-          <textarea style={{ ...inp, minHeight: 64, font: "inherit" }} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+        <div className="full">
+          <label>รายละเอียด / สคริปต์ (เก็บไว้ในหน้าแคมเปญ)</label>
+          <textarea className="bn-in" style={{ minHeight: 64 }} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
         </div>
-        <div style={{ gridColumn: "1/-1" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>Link โพสต์</p>
-          <input style={inp} placeholder="https://..." value={form.link} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))} />
+        <div className="full">
+          <label>Link โพสต์</label>
+          <input className="bn-in" placeholder="https://..." value={form.link} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))} />
         </div>
       </div>
-      {err && <p role="alert" style={{ margin: "10px 0 0", fontSize: 13, color: "#A32D2D" }}>❌ {err}</p>}
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={handleSubmit} disabled={loading} style={{ fontSize: 13, padding: "8px 20px", borderRadius: 99, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontWeight: 500 }}>
-          {loading ? "กำลังบันทึก..." : "บันทึก"}
-        </button>
-        <button onClick={() => setOpen(false)} style={{ fontSize: 13, padding: "8px 16px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>
-          ยกเลิก
-        </button>
+      {err && <p role="alert" className="bn-err" style={{ marginTop: 12 }}>{err}</p>}
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button className="bn-btn" onClick={handleSubmit} disabled={loading}>{loading ? "กำลังบันทึก..." : "บันทึก"}</button>
+        <button className="bn-btn line" onClick={() => setOpen(false)}>ยกเลิก</button>
       </div>
     </div>
   );
@@ -199,120 +169,113 @@ export default function MarketingPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const postedPct = summary && summary.total ? Math.round((summary.posted / summary.total) * 100) : 0;
+
   return (
-    <main style={{ padding: "24px 20px", maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
+    <main className="bn">
+      <section className="bn-hero">
+        <div>
+          <h1>Marketing Fryday</h1>
+          <p>วางแผน ผลิต และติดตามผลคอนเทนต์ทุกช่องทาง</p>
+        </div>
+        <div className="bn-hero-side">
+          {summary && <div className="bn-kpi"><b>{summary.total}</b><span>แคมเปญทั้งหมด</span></div>}
+          {summary && <div className="bn-kpi"><b>{summary.posted}</b><span>โพสต์แล้ว</span></div>}
+          <button className="bn-ghost" onClick={fetchData}>รีเฟรช</button>
+        </div>
+      </section>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 500, margin: 0, color: "#1a1a18" }}>📣 Fryday — Marketing</h1>
-        <button onClick={fetchData} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>
-          🔄 รีเฟรช
-        </button>
-      </div>
+      <nav className="bn-grid" aria-label="เครื่องมือ Marketing">
+        <a href="/marketing/planner" className="bn-card half" style={{ gridColumn: "span 3", borderColor: "#C0200A" }}>
+          <h2 style={{ fontSize: 15 }}>วางแผนคอนเทนต์</h2>
+          <p className="bn-sub">ปฏิทิน วิเคราะห์ยอดขายและเทรนด์ คิดไอเดีย เขียนสคริปต์</p>
+        </a>
+        <a href="/marketing/studio" className="bn-card dark half" style={{ gridColumn: "span 3" }}>
+          <h2 style={{ fontSize: 15 }}>Studio ทำคลิป “พิกัดร้าน”</h2>
+          <p className="bn-sub">ใส่ฟุตเทจ ดูตัวอย่าง แล้วบันทึกเป็นไฟล์ 9:16</p>
+        </a>
+        <a href="/marketing/insights" className="bn-card tint half" style={{ gridColumn: "span 3" }}>
+          <h2 style={{ fontSize: 15 }}>สถิติเพจ</h2>
+          <p className="bn-sub" style={{ color: "#6B3A2E" }}>อัปโหลดข้อมูลแต่ละช่องทาง ดูยอดตามช่วงเวลา</p>
+        </a>
+        <a href="/tasks" className="bn-card half" style={{ gridColumn: "span 3" }}>
+          <h2 style={{ fontSize: 15 }}>งานของทีม</h2>
+          <p className="bn-sub">เพิ่มและติดตามงาน</p>
+        </a>
+      </nav>
 
-      {/* ทางลัดไปเครื่องมือทำคอนเทนต์ */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <a href="/marketing/planner" style={{ flex: "1 1 260px", textDecoration: "none", background: "#fff", border: "1px solid #C0200A", borderRadius: 12, padding: "14px 18px", color: "#1a1a18" }}>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>🗓 วางแผนคอนเทนต์</div>
-          <div style={{ fontSize: 12, color: "#73726c", marginTop: 4 }}>ปฏิทิน · วิเคราะห์ยอดขายและเทรนด์ · คิดไอเดีย · เขียนสคริปต์</div>
-        </a>
-        <a href="/marketing/studio" style={{ flex: "1 1 260px", textDecoration: "none", background: "#C0200A", border: "1px solid #C0200A", borderRadius: 12, padding: "14px 18px", color: "#fff" }}>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>🎬 Studio ทำคลิป “พิกัดร้าน”</div>
-          <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>ใส่ฟุตเทจ ดูตัวอย่าง แล้วบันทึกเป็นไฟล์ 9:16</div>
-        </a>
-        <a href="/marketing/insights" style={{ flex: "1 1 260px", textDecoration: "none", background: "#fff", border: "1px solid #185FA5", borderRadius: 12, padding: "14px 18px", color: "#1a1a18" }}>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>สถิติเพจ</div>
-          <div style={{ fontSize: 12, color: "#73726c", marginTop: 4 }}>อัปโหลดข้อมูลแต่ละช่องทาง · ดูยอดตามช่วงเวลา</div>
-        </a>
-        <a href="/tasks" style={{ flex: "1 1 200px", textDecoration: "none", background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "14px 18px", color: "#1a1a18" }}>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>📋 งานของทีม</div>
-          <div style={{ fontSize: 12, color: "#73726c", marginTop: 4 }}>เพิ่มและติดตามงาน</div>
-        </a>
-      </div>
-
-      {loading && <p style={{ color: "#73726c", fontSize: 14 }}>กำลังโหลด...</p>}
-      {error   && <p style={{ color: "#A32D2D", fontSize: 14 }}>❌ {error}</p>}
+      {loading && <p className="bn-empty">กำลังโหลด...</p>}
+      {error && <p className="bn-err" role="alert">{error}</p>}
 
       {!loading && !error && summary && (
         <>
-          {/* Summary */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-            <StatCard label="แคมเปญทั้งหมด" value={String(summary.total)} sub={`โพสต์แล้ว ${summary.posted} รายการ`} />
-            <StatCard label="งบรวม" value={`฿${formatBaht(summary.totalBudget)}`} color="#D85A30" />
-            <StatCard label="Reach รวม" value={formatNum(summary.totalReach)} color="#185FA5" />
-            <StatCard label="Engagement รวม" value={formatNum(summary.totalEngagement)} color="#534AB7" />
-            <StatCard label="ยอดขายเพิ่ม" value={`฿${formatBaht(summary.totalSales)}`} color="#1D9E75" />
+          <div className="bn-grid">
+            <article className="bn-card wide-m" style={{ gridColumn: "span 3" }}>
+              <h3>โพสต์แล้ว</h3>
+              <b className="bn-big">{summary.posted}<small> / {summary.total}</small></b>
+              <div className="bn-bar" role="img" aria-label={`โพสต์แล้ว ${postedPct}%`}><span style={{ width: `${postedPct}%` }} /></div>
+            </article>
+            <article className="bn-card half" style={{ gridColumn: "span 3" }}>
+              <h3>งบรวม</h3>
+              <b className="bn-big">฿{formatBaht(summary.totalBudget)}</b>
+            </article>
+            <article className="bn-card half" style={{ gridColumn: "span 2" }}>
+              <h3>Reach รวม</h3>
+              <b className="bn-big">{formatNum(summary.totalReach)}</b>
+            </article>
+            <article className="bn-card half" style={{ gridColumn: "span 2" }}>
+              <h3>Engagement</h3>
+              <b className="bn-big">{formatNum(summary.totalEngagement)}</b>
+            </article>
+            <article className="bn-card tint half" style={{ gridColumn: "span 2" }}>
+              <h3>ยอดขายเพิ่ม</h3>
+              <b className="bn-big">฿{formatBaht(summary.totalSales)}</b>
+            </article>
           </div>
 
-          {/* Status filter */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-            {["ทั้งหมด", ...STATUS_LIST].map((s) => {
-              const st = STATUS_STYLE[s] ?? { bg: "#F1EFE8", color: "#5F5E5A", border: "#D3D1C7" };
-              const active = statusFilter === s;
-              return (
-                <button key={s} onClick={() => setStatusFilter(s)} style={{ fontSize: 12, padding: "5px 14px", borderRadius: 99, border: `0.5px solid ${active ? st.border : "#d3d1c7"}`, background: active ? st.bg : "transparent", color: active ? st.color : "#73726c", cursor: "pointer", fontWeight: active ? 500 : 400 }}>
-                  {s}
-                </button>
-              );
-            })}
+          <div className="bn-pills" role="group" aria-label="กรองตามสถานะ">
+            {["ทั้งหมด", ...STATUS_LIST].map((s) => (
+              <button key={s} className="bn-pill" aria-pressed={statusFilter === s} onClick={() => setStatusFilter(s)}>{s}</button>
+            ))}
           </div>
 
-          {/* Add Form */}
           <AddCampaignForm onAdded={fetchData} />
 
-          {/* Campaign Cards */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {campaigns.length === 0 ? (
-              <p style={{ textAlign: "center", padding: "32px 0", fontSize: 13, color: "#aaa" }}>ไม่มีแคมเปญ</p>
-            ) : (
-              campaigns.map((c) => {
-                const st = STATUS_STYLE[c.status] ?? STATUS_STYLE["ไอเดีย"];
-                return (
-                  <div key={c.id} style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "14px 18px" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-                      <span style={{ fontSize: 20 }}>{CONTENT_ICON[c.contentType ?? ""] ?? "📋"}</span>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: c.title.trim() ? "#1a1a18" : "#a0a09a" }}>{c.title.trim() || "(ยังไม่ได้ตั้งชื่อ)"}</p>
-                        <div style={{ display: "flex", gap: 6, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
-                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color, border: `0.5px solid ${st.border}`, fontWeight: 500 }}>
-                            {c.status}
-                          </span>
-                          {c.postDate && <span style={{ fontSize: 11, color: "#73726c" }}>📅 {formatDate(c.postDate)}</span>}
-                          {c.assignee && <span style={{ fontSize: 11, color: "#73726c" }}>👤 {c.assignee}</span>}
+          <section className="bn-card">
+            <div className="bn-head"><h2>แคมเปญ</h2><span className="bn-sub" style={{ margin: 0 }}>{campaigns.length} รายการ</span></div>
+            {campaigns.length === 0 ? <p className="bn-empty">ไม่มีแคมเปญ</p> : (
+              <ul className="bn-rows">
+                {campaigns.map((c) => {
+                  const st = STATUS_STYLE[c.status] ?? STATUS_STYLE["ไอเดีย"];
+                  return (
+                    <li key={c.id} className="bn-row" style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
+                      <div className="bn-row-main" style={{ minWidth: 200 }}>
+                        <p style={{ whiteSpace: "normal", color: c.title.trim() ? undefined : "#a0a09a" }}>{c.title.trim() || "(ยังไม่ได้ตั้งชื่อ)"}</p>
+                        <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
+                          <span className="bn-tag" style={{ background: st.bg, color: st.color }}>{c.status}</span>
+                          {c.contentType && <span className="bn-tag" style={{ background: "#fff", border: "1px solid #EBD9D2", color: "#7A6A64" }}>{c.contentType}</span>}
+                          {c.postDate && <small style={{ margin: 0 }}>{formatDate(c.postDate)}</small>}
+                          {c.assignee && <small style={{ margin: 0 }}>{c.assignee}</small>}
+                          {c.channels.map((ch) => <span key={ch} className="bn-tag" style={{ background: "#FDE8E4", color: "#B3200A" }}>{ch}</span>)}
                         </div>
+                        {(c.budget > 0 || c.reach > 0 || c.engagement > 0 || c.salesIncrease > 0) && (
+                          <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap", fontSize: 12, color: "#7A6A64" }}>
+                            {c.budget > 0 && <span>งบ <b style={{ color: "#2A0B07" }}>฿{formatBaht(c.budget)}</b></span>}
+                            {c.reach > 0 && <span>Reach <b style={{ color: "#2A0B07" }}>{formatNum(c.reach)}</b></span>}
+                            {c.engagement > 0 && <span>Engagement <b style={{ color: "#2A0B07" }}>{formatNum(c.engagement)}</b></span>}
+                            {c.salesIncrease > 0 && <span>ยอดขายเพิ่ม <b style={{ color: "#2E8B6A" }}>฿{formatBaht(c.salesIncrease)}</b></span>}
+                          </div>
+                        )}
                       </div>
                       {c.link && (
-                        <a href={c.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#185FA5", textDecoration: "none", padding: "4px 10px", border: "0.5px solid #B5D4F4", borderRadius: 99, background: "#E6F1FB", flexShrink: 0 }}>
-                          ดูโพสต์ ↗
-                        </a>
+                        <a href={c.link} target="_blank" rel="noopener noreferrer" className="bn-pill" style={{ flex: "none" }}>ดูโพสต์ ↗</a>
                       )}
-                    </div>
-
-                    {/* Channels */}
-                    {c.channels.length > 0 && (
-                      <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
-                        {c.channels.map((ch) => (
-                          <span key={ch} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "#EEEDFE", color: "#3C3489", border: "0.5px solid #CECBF6" }}>
-                            {CHANNEL_ICON[ch] ? "" : ""}{ch}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Stats row */}
-                    {(c.budget > 0 || c.reach > 0 || c.engagement > 0 || c.salesIncrease > 0) && (
-                      <div style={{ display: "flex", gap: 16, paddingTop: 8, borderTop: "0.5px solid #f1efe8", flexWrap: "wrap" }}>
-                        {c.budget > 0 && <div style={{ fontSize: 12 }}><span style={{ color: "#73726c" }}>งบ </span><span style={{ fontWeight: 500, color: "#D85A30" }}>฿{formatBaht(c.budget)}</span></div>}
-                        {c.reach > 0 && <div style={{ fontSize: 12 }}><span style={{ color: "#73726c" }}>Reach </span><span style={{ fontWeight: 500, color: "#185FA5" }}>{formatNum(c.reach)}</span></div>}
-                        {c.engagement > 0 && <div style={{ fontSize: 12 }}><span style={{ color: "#73726c" }}>Engagement </span><span style={{ fontWeight: 500, color: "#534AB7" }}>{formatNum(c.engagement)}</span></div>}
-                        {c.salesIncrease > 0 && <div style={{ fontSize: 12 }}><span style={{ color: "#73726c" }}>ยอดขายเพิ่ม </span><span style={{ fontWeight: 500, color: "#1D9E75" }}>฿{formatBaht(c.salesIncrease)}</span></div>}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </div>
+          </section>
         </>
       )}
     </main>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import "../bento.css";
 
 interface Transaction {
   id: string;
@@ -37,17 +38,6 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
 }
 
-// ---- Stat Card ----
-function StatCard({ label, value, color, sub }: { label: string; value: string; color: string; sub?: string }) {
-  return (
-    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 20px", flex: "1 1 160px" }}>
-      <p style={{ margin: "0 0 6px", fontSize: 12, color: "#73726c" }}>{label}</p>
-      <p style={{ margin: 0, fontSize: 24, fontWeight: 500, color, lineHeight: 1.2 }}>฿{value}</p>
-      {sub && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#73726c" }}>{sub}</p>}
-    </div>
-  );
-}
-
 // ---- Add Transaction Form ----
 function AddTransactionForm({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen]       = useState(false);
@@ -70,73 +60,65 @@ function AddTransactionForm({ onAdded }: { onAdded: () => void }) {
     onAdded();
   };
 
-  const inp: React.CSSProperties = { width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #d3d1c7", background: "#faf9f5", color: "#1a1a18", boxSizing: "border-box" };
-
   if (!open) return (
-    <button onClick={() => setOpen(true)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "#fff", color: "#1a1a18", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-      + เพิ่มรายการ
-    </button>
+    <div><button className="bn-btn" onClick={() => setOpen(true)}>+ เพิ่มรายการ</button></div>
   );
 
   return (
-    <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 20px", marginBottom: 16 }}>
-      <p style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>เพิ่มรายการใหม่</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div style={{ gridColumn: "1/-1" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>ชื่อรายการ *</p>
-          <input style={inp} placeholder="เช่น ยอดขาย 16 พ.ค." value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+    <div className="bn-card">
+      <div className="bn-head"><h2>เพิ่มรายการใหม่</h2></div>
+      <div className="bn-form">
+        <div className="full">
+          <label>ชื่อรายการ *</label>
+          <input className="bn-in" placeholder="เช่น ยอดขาย 16 พ.ค." value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>ประเภท</p>
-          <select style={inp} value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as "รายรับ" | "รายจ่าย" }))}>
+          <label>ประเภท</label>
+          <select className="bn-in" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as "รายรับ" | "รายจ่าย" }))}>
             <option>รายรับ</option>
             <option>รายจ่าย</option>
           </select>
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>จำนวนเงิน (บาท) *</p>
-          <input style={inp} type="number" placeholder="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+          <label>จำนวนเงิน (บาท) *</label>
+          <input className="bn-in" type="number" placeholder="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>หมวดหมู่</p>
-          <select style={inp} value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
+          <label>หมวดหมู่</label>
+          <select className="bn-in" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
             {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>วันที่</p>
-          <input style={inp} type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+          <label>วันที่</label>
+          <input className="bn-in" type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
         </div>
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#73726c" }}>ช่องทางชำระ</p>
-          <select style={inp} value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))}>
+          <label>ช่องทางชำระ</label>
+          <select className="bn-in" value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))}>
             {CHANNELS.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={handleSubmit} disabled={loading} style={{ fontSize: 13, padding: "8px 20px", borderRadius: 99, border: "none", background: "#1D9E75", color: "#fff", cursor: "pointer", fontWeight: 500 }}>
-          {loading ? "กำลังบันทึก..." : "บันทึก"}
-        </button>
-        <button onClick={() => setOpen(false)} style={{ fontSize: 13, padding: "8px 16px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>
-          ยกเลิก
-        </button>
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button className="bn-btn" onClick={handleSubmit} disabled={loading}>{loading ? "กำลังบันทึก..." : "บันทึก"}</button>
+        <button className="bn-btn line" onClick={() => setOpen(false)}>ยกเลิก</button>
       </div>
     </div>
   );
 }
 
-// ---- Bar Chart (CSS only) ----
-function MiniBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+// ---- Bar (CSS only) ----
+function MiniBar({ label, value, max, income }: { label: string; value: number; max: number; income: boolean }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#73726c", marginBottom: 4 }}>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#7A6A64", marginBottom: 5 }}>
         <span>{label}</span>
-        <span style={{ fontWeight: 500, color: "#1a1a18" }}>฿{formatBaht(value)}</span>
+        <span style={{ fontWeight: 600, color: "#2A0B07" }}>฿{formatBaht(value)}</span>
       </div>
-      <div style={{ height: 6, background: "#f1efe8", borderRadius: 99, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 99, transition: "width 0.6s ease" }} />
+      <div style={{ height: 10, background: "#F3E3DD", borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: income ? "linear-gradient(90deg,#4DB38C,#2E8B6A)" : "linear-gradient(90deg,#E8452B,#C0200A)", borderRadius: 99, transition: "width 0.6s ease" }} />
       </div>
     </div>
   );
@@ -166,7 +148,6 @@ export default function FinancePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // category breakdown
   const categoryTotals = CATEGORIES.map((cat) => ({
     cat,
     total: transactions.filter((t) => t.category === cat).reduce((s, t) => s + t.amount, 0),
@@ -174,101 +155,101 @@ export default function FinancePage() {
   const maxCat = Math.max(...categoryTotals.map((c) => c.total), 1);
 
   const filtered = typeFilter === "ทั้งหมด" ? transactions : transactions.filter((t) => t.type === typeFilter);
+  const rev = summary?.totalRevenue ?? 0;
+  const exp = summary?.totalExpense ?? 0;
+  const expPct = rev > 0 ? Math.min(100, Math.round((exp / rev) * 100)) : exp > 0 ? 100 : 0;
+  const monthLabel = new Date(month + "-01T00:00:00").toLocaleDateString("th-TH", { month: "long", year: "numeric" });
 
   return (
-    <main style={{ padding: "24px 20px", maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
+    <main className="bn">
+      <section className="bn-hero">
+        <div>
+          <h1>การเงิน Fryday</h1>
+          <p>สรุปรายรับรายจ่ายประจำ{monthLabel}</p>
+        </div>
+        <div className="bn-hero-side">
+          {summary && (
+            <div className={"bn-kpi " + (summary.netProfit >= 0 ? "pos" : "neg")}>
+              <b>฿{formatBaht(summary.netProfit)}</b><span>{summary.netProfit >= 0 ? "กำไรสุทธิ" : "ขาดทุนสุทธิ"}</span>
+            </div>
+          )}
+          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} aria-label="เลือกเดือน" />
+          <button className="bn-ghost" onClick={fetchData}>รีเฟรช</button>
+        </div>
+      </section>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 500, margin: 0, color: "#1a1a18" }}>💰 Fryday — Finance</h1>
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
-          style={{ fontSize: 13, padding: "6px 12px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "#fff", color: "#1a1a18", cursor: "pointer", marginLeft: "auto" }} />
-        <button onClick={fetchData} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 99, border: "0.5px solid #d3d1c7", background: "transparent", color: "#73726c", cursor: "pointer" }}>
-          🔄 รีเฟรช
-        </button>
-      </div>
-
-      {loading && <p style={{ color: "#73726c", fontSize: 14 }}>กำลังโหลด...</p>}
-      {error   && <p style={{ color: "#A32D2D", fontSize: 14 }}>❌ {error}</p>}
+      {loading && <p className="bn-empty">กำลังโหลด...</p>}
+      {error && <p className="bn-err" role="alert">{error}</p>}
 
       {!loading && !error && summary && (
         <>
-          {/* Summary Cards */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-            <StatCard label="รายรับรวม"    value={formatBaht(summary.totalRevenue)}   color="#1D9E75" />
-            <StatCard label="รายจ่ายรวม"   value={formatBaht(summary.totalExpense)}   color="#D85A30" />
-            <StatCard label="กำไรสุทธิ"    value={formatBaht(summary.netProfit)}
-              color={summary.netProfit >= 0 ? "#185FA5" : "#A32D2D"}
-              sub={summary.netProfit >= 0 ? "กำไร" : "ขาดทุน"} />
-          </div>
+          <div className="bn-grid">
+            <article className="bn-card half" style={{ gridColumn: "span 4" }}>
+              <h3>รายรับรวม</h3>
+              <b className="bn-big" style={{ color: "#2E8B6A" }}>฿{formatBaht(summary.totalRevenue)}</b>
+              <p className="bn-sub">{transactions.filter((t) => t.type === "รายรับ").length} รายการ</p>
+            </article>
+            <article className="bn-card half" style={{ gridColumn: "span 4" }}>
+              <h3>รายจ่ายรวม</h3>
+              <b className="bn-big" style={{ color: "#C0200A" }}>฿{formatBaht(summary.totalExpense)}</b>
+              <div className="bn-bar" role="img" aria-label={`รายจ่าย ${expPct}% ของรายรับ`}><span style={{ width: `${expPct}%` }} /></div>
+              <p className="bn-sub">{expPct}% ของรายรับ</p>
+            </article>
+            <article className="bn-card tint wide-m" style={{ gridColumn: "span 4" }}>
+              <h3>ส่วนแบ่งต่อคน</h3>
+              <b className="bn-big">฿{formatBaht(summary.sharePerPerson)}</b>
+              <p className="bn-sub">{summary.netProfit >= 0 ? "จากกำไรสุทธิเดือนนี้" : "ขาดทุนเฉลี่ยต่อคน"}</p>
+            </article>
 
-          {/* Partner Share Cards */}
-          <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
-            <p style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>ส่วนแบ่งหุ้นส่วน — แบ่งเท่ากัน 3 คน</p>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              {PARTNERS.map((name, i) => (
-                <div key={i} style={{ flex: "1 1 140px", background: "#f6f5f0", borderRadius: 10, padding: "12px 16px" }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: ["#E6F1FB","#EAF3DE","#FAEEDA"][i], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 500, color: ["#185FA5","#27500A","#854F0B"][i], marginBottom: 8 }}>
-                    {name.charAt(name.length - 1)}
+            <section className="bn-card" style={{ gridColumn: "span 7" }}>
+              <div className="bn-head"><h2>หุ้นส่วน</h2><span className="bn-sub" style={{ margin: 0 }}>แบ่งเท่ากัน</span></div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10 }}>
+                {PARTNERS.map((name, i) => (
+                  <div key={name} style={{ background: "#FBF4F0", borderRadius: 16, padding: "12px 14px" }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: ["#2A0B07", "#C0200A", "#FF8A66", "#F3C6B8"][i % 4], color: i === 3 ? "#5A1A10" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{name.charAt(0)}</div>
+                    <p style={{ fontSize: 12, color: "#7A6A64" }}>{name}</p>
+                    <p style={{ fontSize: 17, fontWeight: 600, color: summary.sharePerPerson >= 0 ? "#2A0B07" : "#A32D2D" }}>฿{formatBaht(summary.sharePerPerson)}</p>
                   </div>
-                  <p style={{ margin: "0 0 2px", fontSize: 12, color: "#73726c" }}>{name}</p>
-                  <p style={{ margin: 0, fontSize: 18, fontWeight: 500, color: summary.sharePerPerson >= 0 ? "#1D9E75" : "#A32D2D" }}>
-                    ฿{formatBaht(summary.sharePerPerson)}
-                  </p>
-                </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="bn-card" style={{ gridColumn: "span 5" }}>
+              <div className="bn-head"><h2>แยกตามหมวดหมู่</h2></div>
+              {categoryTotals.length === 0 ? <p className="bn-empty">ยังไม่มีรายการ</p> : categoryTotals.map(({ cat, total }) => (
+                <MiniBar key={cat} label={cat} value={total} max={maxCat} income={cat === "ยอดขาย"} />
               ))}
-            </div>
+            </section>
           </div>
 
-          {/* Category Breakdown */}
-          {categoryTotals.length > 0 && (
-            <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
-              <p style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>แยกตามหมวดหมู่</p>
-              {categoryTotals.map(({ cat, total }) => (
-                <MiniBar key={cat} label={cat} value={total} max={maxCat}
-                  color={["ยอดขาย"].includes(cat) ? "#1D9E75" : "#D85A30"} />
-              ))}
-            </div>
-          )}
-
-          {/* Add Transaction */}
           <AddTransactionForm onAdded={fetchData} />
 
-          {/* Transaction List */}
-          <div style={{ background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "0.5px solid #e5e3db", flexWrap: "wrap" }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#1a1a18" }}>รายการทั้งหมด</p>
-              <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
-                {(["ทั้งหมด","รายรับ","รายจ่าย"] as const).map((t) => (
-                  <button key={t} onClick={() => setTypeFilter(t)} style={{ fontSize: 12, padding: "4px 12px", borderRadius: 99, border: `0.5px solid ${typeFilter === t ? "#1D9E75" : "#d3d1c7"}`, background: typeFilter === t ? "#EAF3DE" : "transparent", color: typeFilter === t ? "#27500A" : "#73726c", cursor: "pointer" }}>
-                    {t}
-                  </button>
+          <section className="bn-card">
+            <div className="bn-head">
+              <h2>รายการทั้งหมด</h2>
+              <div className="bn-pills">
+                {(["ทั้งหมด", "รายรับ", "รายจ่าย"] as const).map((t) => (
+                  <button key={t} className="bn-pill" aria-pressed={typeFilter === t} onClick={() => setTypeFilter(t)}>{t}</button>
                 ))}
               </div>
             </div>
-
-            {filtered.length === 0 ? (
-              <p style={{ textAlign: "center", padding: "32px 0", fontSize: 13, color: "#aaa" }}>ไม่มีรายการ</p>
-            ) : (
-              filtered.map((t, i) => (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "11px 16px", borderTop: i === 0 ? "none" : "0.5px solid #f1efe8", gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 9, background: t.type === "รายรับ" ? "#EAF3DE" : "#FCEBEB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-                    {t.type === "รายรับ" ? "💚" : "🔴"}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#1a1a18", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#73726c" }}>{t.category} · {formatDate(t.date)}{t.recordedBy ? ` · ${t.recordedBy}` : ""}</p>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: t.type === "รายรับ" ? "#1D9E75" : "#D85A30" }}>
+            {filtered.length === 0 ? <p className="bn-empty">ไม่มีรายการ</p> : (
+              <ul className="bn-rows">
+                {filtered.map((t) => (
+                  <li key={t.id} className={"bn-row" + (t.type === "รายรับ" ? " in" : "")}>
+                    <div className="bn-row-main">
+                      <p>{t.title}</p>
+                      <small>{t.category} · {formatDate(t.date)}{t.recordedBy ? ` · ${t.recordedBy}` : ""}</small>
+                    </div>
+                    <div className="bn-amt" style={{ color: t.type === "รายรับ" ? "#2E8B6A" : "#C0200A" }}>
                       {t.type === "รายรับ" ? "+" : "-"}฿{formatBaht(t.amount)}
-                    </p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#73726c" }}>ส่วนแบ่ง ฿{formatBaht(Math.abs(t.sharePerPerson))}/คน</p>
-                  </div>
-                </div>
-              ))
+                      <small>ส่วนแบ่ง ฿{formatBaht(Math.abs(t.sharePerPerson))}/คน</small>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
+          </section>
         </>
       )}
     </main>
