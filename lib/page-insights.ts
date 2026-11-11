@@ -2,11 +2,11 @@
 
 export const CHANNELS = ["TikTok", "Instagram", "Facebook", "YouTube"] as const;
 export type Channel = (typeof CHANNELS)[number];
-export const FIELDS = ["views", "viewers", "follower_views", "likes", "comments", "shares", "saves", "profile_visits", "new_followers"] as const;
+export const FIELDS = ["views", "viewers", "follower_views", "likes", "comments", "shares", "saves", "profile_visits", "new_followers", "interactions"] as const;
 export type Field = (typeof FIELDS)[number];
 export const FIELD_LABEL: Record<Field, string> = {
   views: "การดู", viewers: "ผู้ชม", follower_views: "การดูจากผู้ติดตาม", likes: "ไลก์", comments: "ความคิดเห็น", shares: "แชร์", saves: "บันทึก",
-  profile_visits: "เข้าโปรไฟล์", new_followers: "ผู้ติดตามใหม่",
+  profile_visits: "เข้าโปรไฟล์", new_followers: "ผู้ติดตามใหม่", interactions: "การโต้ตอบรวม",
 };
 export const INTERACTION_FIELDS: Field[] = ["likes", "comments", "shares", "saves"];
 
@@ -19,6 +19,14 @@ export const diffDays = (a: string, b: string) => Math.round((Date.parse(b) - Da
 export const bangkokToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
 
 /* ---------- CSV ---------- */
+/* ไฟล์ส่งออกของ Meta เป็น UTF-16 (มี BOM) ส่วนไฟล์อื่นส่วนใหญ่เป็น UTF-8 */
+export function decodeText(buf: ArrayBuffer): string {
+  const b = new Uint8Array(buf);
+  if (b[0] === 0xff && b[1] === 0xfe) return new TextDecoder("utf-16le").decode(buf);
+  if (b[0] === 0xfe && b[1] === 0xff) return new TextDecoder("utf-16be").decode(buf);
+  return new TextDecoder("utf-8").decode(buf);
+}
+
 export function parseCsv(text: string): string[][] {
   const t = text.replace(/^﻿/, "");
   const first = t.split(/\r?\n/, 1)[0] ?? "";
@@ -45,14 +53,16 @@ export function mapHeader(h: string): Col {
   if (/^(date|day|time|period|วันที่|วัน|เวลา)/.test(s)) return "day";
   if (/(content.?type|media.?type|post.?type|format|ประเภท)/.test(s)) return "content_type";
   if (/(follower.*view|view.*follower|from followers|ผู้ติดตาม.*(ดู|วิว)|(ดู|วิว).*ผู้ติดตาม)/.test(s)) return "follower_views";
-  if (/(new.?follow|follows|net.?follow|followers? gained|ผู้ติดตามใหม่|ติดตามเพิ่ม|ผู้ติดตามเพิ่ม)/.test(s)) return "new_followers";
+  if (/(new.?follow|follows|net.?follow|followers? gained|ผู้ติดตามใหม่|ติดตามเพิ่ม|ผู้ติดตามเพิ่ม|การติดตาม)/.test(s)) return "new_followers";
+  if (/(link.?(click|tap)|คลิกลิงก์)/.test(s)) return null;
+  if (/(interaction|engagement|การโต้ตอบ)/.test(s)) return "interactions";
   if (/(viewers|unique|accounts reached|reach|ผู้ชม|การเข้าถึง|เข้าถึง)/.test(s)) return "viewers";
   if (/(view|play|impression|วิว|การดู|ยอดดู|จำนวนการดู)/.test(s)) return "views";
   if (/(like|ไลก์|ถูกใจ)/.test(s)) return "likes";
   if (/(comment|คอมเมนต์|ความคิดเห็น)/.test(s)) return "comments";
   if (/(share|repost|แชร์)/.test(s)) return "shares";
   if (/(save|bookmark|บันทึก)/.test(s)) return "saves";
-  if (/(profile|โปรไฟล์)/.test(s)) return "profile_visits";
+  if (/(profile|โปรไฟล์|visits?|การเข้าชม)/.test(s)) return "profile_visits";
   return null;
 }
 
@@ -95,10 +105,15 @@ export const TYPE_LABEL: Record<string, string> = { reels: "Reels / วิดี
 
 export interface CsvResult { rows: ImportRow[]; mapping: { header: string; col: Col }[]; skipped: number; error?: string }
 export function rowsFromCsv(text: string): CsvResult {
-  const table = parseCsv(text);
+  let table = parseCsv(text.replace(/^\uFEFF/, "").replace(/^sep=.\r?\n/i, ""));
+  // รูปแบบส่งออกของ Meta: แถวแรกเป็นชื่อรายงาน (เช่น "ยอดดู") ตามด้วยหัวตาราง "วันที่","Primary"
+  let title = "";
+  if (table.length > 2 && table[0].filter((c) => c.trim()).length === 1 && mapHeader(table[1][0] ?? "") === "day") { title = table[0][0].trim(); table = table.slice(1); }
   if (table.length < 2) return { rows: [], mapping: [], skipped: 0, error: "ไฟล์ต้องมีแถวหัวตารางและข้อมูลอย่างน้อย 1 แถว" };
   const head = table[0];
-  const mapping = head.map((h) => ({ header: h.trim(), col: mapHeader(h) }));
+  const metricTitle = title ? mapHeader(title) : null;
+  const mapping = head.map((h, i) => ({ header: h.trim(), col: mapHeader(h) ?? (i > 0 && /^(primary|value|ค่า|total)$/i.test(h.trim()) ? metricTitle : null) }));
+  if (title) mapping.forEach((m) => { if (m.col === metricTitle && m.header !== head[0].trim()) m.header = `${title} (${m.header})`; });
   const used = new Set<string>();
   // ถ้าหัวตารางซ้ำ ใช้คอลัมน์แรกที่เจอ
   const cols = mapping.map((m) => { if (!m.col || used.has(m.col)) return null; used.add(m.col); return m.col; });
@@ -123,8 +138,8 @@ export function rowsFromCsv(text: string): CsvResult {
 
 /* ---------- รวมตัวเลข ---------- */
 const n = (v: unknown) => (typeof v === "number" ? v : v == null ? 0 : Number(v) || 0);
-export type Totals = Record<Field, number> & { interactions: number };
-const zero = (): Totals => ({ ...(Object.fromEntries(FIELDS.map((f) => [f, 0])) as Record<Field, number>), interactions: 0 });
+export type Totals = Record<Field, number>;
+const zero = (): Totals => Object.fromEntries(FIELDS.map((f) => [f, 0])) as Totals;
 
 /* ยอดรวมรายวันต่อช่อง: ใช้แถว 'all' ถ้ามี ไม่งั้นรวมจากแถวแยกประเภท */
 export function dailyTotals(rows: MetricRow[], channel: string | "all"): Map<string, Totals> {
@@ -143,18 +158,19 @@ export function dailyTotals(rows: MetricRow[], channel: string | "all"): Map<str
     for (const f of FIELDS) t[f] += g.all ? n(g.all[f]) : g.typed.reduce((s, r) => s + n(r[f]), 0);
     days.set(day, t);
   }
-  for (const t of days.values()) t.interactions = INTERACTION_FIELDS.reduce((s, f) => s + t[f], 0);
+  /* การโต้ตอบรวม: ใช้ค่ารวมที่อัปโหลดมา หรือผลรวมไลก์+คอมเมนต์+แชร์+บันทึก แล้วแต่อันไหนมากกว่า */
+  for (const t of days.values()) t.interactions = Math.max(t.interactions, INTERACTION_FIELDS.reduce((s, f) => s + t[f], 0));
   return days;
 }
 
 export function sumRange(days: Map<string, Totals>, from: string, to: string): Totals & { has: boolean } {
   const t = zero(); let has = false;
-  for (const [d, v] of days) if (d >= from && d <= to) { has = true; for (const f of FIELDS) t[f] += v[f]; t.interactions += v.interactions; }
+  for (const [d, v] of days) if (d >= from && d <= to) { has = true; for (const f of FIELDS) t[f] += v[f]; }
   return { ...t, has };
 }
 
 /* วันที่ไม่มีข้อมูลเป็น null (กราฟจะขาดช่วง ไม่ตกเป็น 0) */
-export function series(days: Map<string, Totals>, from: string, to: string, key: Field | "interactions"): { day: string; v: number | null }[] {
+export function series(days: Map<string, Totals>, from: string, to: string, key: Field): { day: string; v: number | null }[] {
   const out: { day: string; v: number | null }[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) { const t = days.get(d); out.push({ day: d, v: t ? t[key] : null }); }
   return out;

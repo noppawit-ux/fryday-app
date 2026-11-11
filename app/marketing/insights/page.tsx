@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  CHANNELS, FIELDS, FIELD_LABEL, INTERACTION_FIELDS, TYPE_LABEL, addDays, bangkokToday, byType, dailyTotals, delta, diffDays, isDay, rowsFromCsv, series, sumRange,
+  CHANNELS, FIELDS, FIELD_LABEL, INTERACTION_FIELDS, TYPE_LABEL, addDays, bangkokToday, byType, dailyTotals, decodeText, delta, diffDays, isDay, rowsFromCsv, series, sumRange,
   type Channel, type CsvResult, type Field, type ImportRow, type MetricRow,
 } from "@/lib/page-insights";
 
 const ACCENT: Record<string, string> = { all: "#C0200A", TikTok: "#1a1a18", Instagram: "#C13584", Facebook: "#1877F2", YouTube: "#D93025" };
 const PRESETS: [string, string][] = [["7", "7 วัน"], ["14", "14 วัน"], ["30", "30 วัน"], ["90", "90 วัน"], ["all", "ทั้งหมด"], ["custom", "กำหนดเอง"]];
-type MetricKey = Field | "interactions";
+type MetricKey = Field;
 const CARDS: [MetricKey, string][] = [["views", "การดู"], ["viewers", "ผู้ชม"], ["interactions", "การโต้ตอบ"], ["profile_visits", "เข้าโปรไฟล์"], ["new_followers", "ผู้ติดตามใหม่"]];
 const fmt = (v: number) => (v >= 10000 ? (v / 1000).toFixed(v >= 100000 ? 0 : 1).replace(/\.0$/, "") + "K" : Math.round(v).toLocaleString("th-TH"));
 const full = (v: number) => Math.round(v).toLocaleString("th-TH");
@@ -238,6 +238,7 @@ function UploadPanel({ defaultChannel, onSaved, rows }: { defaultChannel: Channe
   const [ch, setCh] = useState<Channel>(defaultChannel);
   const [mode, setMode] = useState<"csv" | "manual" | "delete">("csv");
   const [csv, setCsv] = useState<CsvResult | null>(null);
+  const [fileNotes, setFileNotes] = useState<string[]>([]);
   const [fileName, setFileName] = useState("");
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -274,12 +275,28 @@ function UploadPanel({ defaultChannel, onSaved, rows }: { defaultChannel: Channe
     setCsv(null); setFileName(""); setMVals({});
     onSaved();
   };
-  const onFile = async (f: File | undefined) => {
-    setMsg(""); setErr(""); setCsv(null);
-    if (!f) return;
-    setFileName(f.name);
-    if (f.size > 5 * 1024 * 1024) { setErr("ไฟล์ใหญ่เกิน 5 MB"); return; }
-    setCsv(rowsFromCsv(await f.text()));
+  const onFile = async (files: FileList | null) => {
+    setMsg(""); setErr(""); setCsv(null); setFileNotes([]);
+    if (!files?.length) return;
+    const merged = new Map<string, ImportRow>(), mapping: CsvResult["mapping"] = [], notes: string[] = [];
+    let skipped = 0;
+    for (const f of Array.from(files)) {
+      if (f.size > 5 * 1024 * 1024) { notes.push(`${f.name}: ไฟล์ใหญ่เกิน 5 MB`); continue; }
+      const r = rowsFromCsv(decodeText(await f.arrayBuffer()));
+      if (r.error) { notes.push(`${f.name}: ${r.error}`); continue; }
+      skipped += r.skipped;
+      const used = r.mapping.filter((m) => m.col && m.col !== "day" && m.col !== "content_type");
+      notes.push(`${f.name}: ${used.map((m) => FIELD_LABEL[m.col as Field]).join(", ")} (${r.rows.length} วัน)`);
+      mapping.push(...r.mapping.filter((m) => m.col !== "day" || !mapping.some((x) => x.col === "day")));
+      for (const row of r.rows) {
+        const k = `${row.day}|${row.content_type}`, cur = merged.get(k);
+        merged.set(k, cur ? { ...cur, values: { ...cur.values, ...row.values } } : row);
+      }
+    }
+    setFileName(files.length > 1 ? `${files.length} ไฟล์` : files[0].name);
+    setFileNotes(notes);
+    const rows = [...merged.values()].sort((a, b) => a.day.localeCompare(b.day));
+    setCsv(rows.length ? { rows, mapping, skipped } : { rows: [], mapping, skipped, error: "ไม่พบข้อมูลที่อ่านได้จากไฟล์ที่เลือก" });
   };
   const login = async () => {
     const r = await fetch("/api/roadmap/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw }) }).catch(() => null);
@@ -318,13 +335,14 @@ function UploadPanel({ defaultChannel, onSaved, rows }: { defaultChannel: Channe
 
       {mode === "csv" && (
         <div>
-          <p className="in-note">ส่งออกจาก Insights / Analytics ของแต่ละช่องเป็น CSV ต้องมีคอลัมน์วันที่ และตัวเลขอย่างน้อย 1 อย่าง (Views, Likes, Shares, Saves ฯลฯ) ถ้ามีคอลัมน์ประเภทคอนเทนต์ ระบบจะแยกกราฟตามประเภทให้ ไฟล์ภาษาไทยหรืออังกฤษใช้ได้ วันที่ ค.ศ./พ.ศ. ใช้ได้ ข้อมูลวันเดิมจะถูกอัปเดตทับ</p>
-          <input type="file" accept=".csv,text/csv,text/plain" onChange={(e) => onFile(e.target.files?.[0])} aria-label="เลือกไฟล์ CSV" />
+          <p className="in-note">ส่งออกจาก Insights / Analytics ของแต่ละช่องเป็น CSV เลือกได้หลายไฟล์พร้อมกัน (ไฟล์ของ Meta ที่แยกตามตัวชี้วัดก็ใช้ได้ ระบบรวมตามวันที่ให้) ต้องมีคอลัมน์วันที่ และตัวเลขอย่างน้อย 1 อย่าง (Views, Likes, Shares, Saves ฯลฯ) ถ้ามีคอลัมน์ประเภทคอนเทนต์ ระบบจะแยกกราฟตามประเภทให้ ไฟล์ภาษาไทยหรืออังกฤษใช้ได้ วันที่ ค.ศ./พ.ศ. ใช้ได้ ข้อมูลวันเดิมจะถูกอัปเดตทับ</p>
+          <input type="file" multiple accept=".csv,text/csv,text/plain" onChange={(e) => onFile(e.target.files)} aria-label="เลือกไฟล์ CSV" />
+          {fileNotes.length > 0 && <ul className="in-files">{fileNotes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
           {csv?.error && <p role="alert" className="in-err">{csv.error}</p>}
           {csv && !csv.error && (
             <div className="in-prev">
               <p><b>{fileName}</b> อ่านได้ {csv.rows.length.toLocaleString("th-TH")} แถว ({csv.rows[0].day} – {csv.rows[csv.rows.length - 1].day}){csv.skipped > 0 && <> · ข้าม {csv.skipped} แถว</>}</p>
-              <div className="in-map">
+              <div className="in-map" hidden={csv.mapping.length > 12}>
                 {csv.mapping.map((m, i) => <span key={i} className={m.col ? "ok" : "no"}>{m.header || "(ว่าง)"} → {m.col ? (m.col === "day" ? "วันที่" : m.col === "content_type" ? "ประเภทคอนเทนต์" : FIELD_LABEL[m.col]) : "ไม่ใช้"}</span>)}
               </div>
               <button className="in-btn on" disabled={busy} onClick={() => upload(csv.rows)}>{busy ? "กำลังบันทึก…" : `บันทึกข้อมูล ${ch}`}</button>
@@ -413,7 +431,7 @@ const CSS = `
 .in-chips button{font:inherit;font-size:12.5px;padding:5px 12px;border-radius:99px;border:1px solid #d3d1c7;background:#fff;color:#5f5e5a;cursor:pointer}.in-chips button.on{color:#fff}
 .in-up{background:#FAF9F5}.in-up-top{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
 .in-modes{margin-bottom:12px}
-.in-prev{margin-top:12px;border-top:1px solid #e5e3db;padding-top:12px;font-size:13px}
+.in-files{margin:8px 0 0;padding-left:18px;font-size:12.5px;color:#5f5e5a}.in-prev{margin-top:12px;border-top:1px solid #e5e3db;padding-top:12px;font-size:13px}
 .in-map{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}.in-map span{font-size:12px;border-radius:6px;padding:3px 8px;border:1px solid}
 .in-map .ok{background:#EAF3DE;border-color:#C0DD97;color:#27500A}.in-map .no{background:#f1efe8;border-color:#e5e3db;color:#888780}
 .in-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}.in-form label{font-size:12.5px;color:#5f5e5a;display:flex;flex-direction:column;gap:4px}
