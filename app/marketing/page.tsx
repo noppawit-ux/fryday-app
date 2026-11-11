@@ -220,6 +220,10 @@ export default function MarketingPage() {
           <div style={{ fontSize: 15, fontWeight: 600 }}>🎬 Studio ทำคลิป “พิกัดร้าน”</div>
           <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>ใส่ฟุตเทจ ดูตัวอย่าง แล้วบันทึกเป็นไฟล์ 9:16</div>
         </a>
+        <a href="/marketing/insights" style={{ flex: "1 1 260px", textDecoration: "none", background: "#fff", border: "1px solid #185FA5", borderRadius: 12, padding: "14px 18px", color: "#1a1a18" }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>สถิติเพจ</div>
+          <div style={{ fontSize: 12, color: "#73726c", marginTop: 4 }}>อัปโหลดข้อมูลแต่ละช่องทาง · ดูยอดตามช่วงเวลา</div>
+        </a>
         <a href="/tasks" style={{ flex: "1 1 200px", textDecoration: "none", background: "#fff", border: "0.5px solid #e5e3db", borderRadius: 12, padding: "14px 18px", color: "#1a1a18" }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>📋 งานของทีม</div>
           <div style={{ fontSize: 12, color: "#73726c", marginTop: 4 }}>เพิ่มและติดตามงาน</div>
