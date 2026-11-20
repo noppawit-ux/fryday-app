@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { aiGuard } from "@/lib/ai-guard";
 
 export const dynamic = "force-dynamic";
 
 const MODEL = process.env.CHAT_AI_MODEL ?? process.env.MARKETING_AI_MODEL ?? "claude-sonnet-4-6";
 
 export async function POST(req: NextRequest) {
+  const denied = await aiGuard();
+  if (denied) return denied;
   try {
     const key = process.env.ANTHROPIC_API_KEY;
     if (!key) {

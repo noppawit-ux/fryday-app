@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ImportPlan, Results, Survey } from "./results";
+import AiLogin from "../../ai-login";
 import "./planner.css";
 import { buildIcs, downloadIcs } from "./ics";
 
@@ -45,12 +46,12 @@ const dowOf = (s: string) => new Date(s + "T00:00:00Z").getUTCDay();
 const thDate = (s: string) => new Date(s + "T00:00:00Z").toLocaleDateString("th-TH", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const typeOf = (format: string) => (format === "โปรโมชัน" ? "โปรโมชัน" : format === "ถาม-ตอบ/โพล" ? "Story" : "Reel/Video");
 
-async function api<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; data: T & { error?: string } }> {
+async function api<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T & { error?: string } }> {
   try {
     const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json" } });
-    return { ok: res.ok, data: await res.json().catch(() => ({})) };
+    return { ok: res.ok, status: res.status, data: await res.json().catch(() => ({})) };
   } catch {
-    return { ok: false, data: { error: "เชื่อมต่อไม่ได้" } as T & { error?: string } };
+    return { ok: false, status: 0, data: { error: "เชื่อมต่อไม่ได้" } as T & { error?: string } };
   }
 }
 
@@ -324,11 +325,12 @@ function Ideas({ items, theme, setTheme, brand, saveBrand, reload, toScript }: {
   const [err, setErr] = useState("");
   const [res, setRes] = useState<Idea[]>([]);
   const [saved, setSaved] = useState<Record<number, string>>({});
+  const [locked, setLocked] = useState(false);
 
-  const gen = async () => {
+  const gen = async (): Promise<void> => {
     setBusy(true); setErr(""); setSaved({});
-    const { ok, data } = await api<{ items: Idea[] }>("/api/marketing/ai", { method: "POST", body: JSON.stringify({ mode: "ideas", brand, channel, formats, pillars, count, theme, existing: items.map((c) => c.title) }) });
-    if (ok) setRes(data.items); else setErr(data.error ?? "สร้างไม่สำเร็จ");
+    const { ok, status, data } = await api<{ items: Idea[] }>("/api/marketing/ai", { method: "POST", body: JSON.stringify({ mode: "ideas", brand, channel, formats, pillars, count, theme, existing: items.map((c) => c.title) }) });
+    if (status === 401) { setLocked(true); setErr(""); } else if (ok) { setLocked(false); setRes(data.items); } else setErr(data.error ?? "สร้างไม่สำเร็จ");
     setBusy(false);
   };
   const save = async (i: Idea, idx: number): Promise<string | null> => {
@@ -361,6 +363,7 @@ function Ideas({ items, theme, setTheme, brand, saveBrand, reload, toScript }: {
         <select style={input} value={count} onChange={(e) => setCount(Number(e.target.value))}>{[3, 5, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}</select>
         <button style={{ ...btnP, marginTop: 12, width: "100%", opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={gen}>{busy ? "กำลังคิด…" : "✨ คิดไอเดีย"}</button>
         {err && <p role="alert" style={{ color: RED, fontSize: 13, margin: "8px 0 0" }}>{err}</p>}
+        {locked && <AiLogin onDone={() => { setLocked(false); void gen(); }} />}
       </section>
 
       <div style={{ flex: "2 1 420px", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
@@ -394,13 +397,14 @@ function ScriptDesigner({ brand, draft, setDraft, reload }: { brand: string; dra
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [sc, setSc] = useState<Script | null>(null);
+  const [locked, setLocked] = useState(false);
   const [msg, setMsg] = useState("");
   const set = (p: Partial<Draft>) => { setDraft({ ...draft, ...p }); };
 
-  const gen = async () => {
+  const gen = async (): Promise<void> => {
     setBusy(true); setErr(""); setMsg("");
-    const { ok, data } = await api<{ script: Script }>("/api/marketing/ai", { method: "POST", body: JSON.stringify({ mode: "script", brand, title: draft.title, format: draft.format, duration, channel: draft.channel, notes: draft.notes }) });
-    if (ok) setSc(data.script); else setErr(data.error ?? "สร้างไม่สำเร็จ");
+    const { ok, status, data } = await api<{ script: Script }>("/api/marketing/ai", { method: "POST", body: JSON.stringify({ mode: "script", brand, title: draft.title, format: draft.format, duration, channel: draft.channel, notes: draft.notes }) });
+    if (status === 401) { setLocked(true); setErr(""); } else if (ok) { setLocked(false); setSc(data.script); } else setErr(data.error ?? "สร้างไม่สำเร็จ");
     setBusy(false);
   };
   const copy = async () => { if (!sc) return; try { await navigator.clipboard.writeText(scriptText(draft, sc)); setMsg("คัดลอกแล้ว"); } catch { setMsg("คัดลอกไม่ได้ เลือกข้อความแล้วคัดลอกเอง"); } };
@@ -432,6 +436,7 @@ function ScriptDesigner({ brand, draft, setDraft, reload }: { brand: string; dra
         <p style={{ margin: "4px 0 0", fontSize: 11, color: MUTED }}>สิ่งที่ไม่ได้กรอก AI จะเว้นเป็น [ใส่…] ไม่แต่งเอง</p>
         <button style={{ ...btnP, marginTop: 12, width: "100%", opacity: busy || !draft.title.trim() ? 0.6 : 1 }} disabled={busy || !draft.title.trim()} onClick={gen}>{busy ? "กำลังเขียน…" : "✨ เขียนสคริปต์"}</button>
         {err && <p role="alert" style={{ color: RED, fontSize: 13, margin: "8px 0 0" }}>{err}</p>}
+        {locked && <AiLogin onDone={() => { setLocked(false); void gen(); }} />}
       </section>
 
       <section style={{ ...card, flex: "2 1 420px", minWidth: 0 }}>
