@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import AiLogin from "../ai-login";
 
 interface Message {
   id: string;
@@ -124,6 +125,7 @@ export default function ChatPage() {
   ]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [locked, setLocked]   = useState(false);
   const [data, setData]       = useState<RestaurantData | null>(null);
   const bottomRef             = useRef<HTMLDivElement>(null);
   const inputRef              = useRef<HTMLTextAreaElement>(null);
@@ -224,6 +226,7 @@ export default function ChatPage() {
       });
 
       const result = await response.json();
+      if (response.status === 401) setLocked(true);
       const reply  = !response.ok
         ? `❌ ${[result.error, result.detail].filter(Boolean).join(" · ") || "AI ตอบไม่ได้"}`
         : result.content?.find((c: { type: string }) => c.type === "text")?.text ?? "ขออภัย ไม่สามารถตอบได้ในขณะนี้ครับ";
@@ -313,6 +316,7 @@ export default function ChatPage() {
           )}
 
           {messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
+          {locked && <AiLogin onDone={() => setLocked(false)} />}
 
           {/* Quick prompts grid — แสดงเมื่อยังไม่มีการโต้ตอบ */}
           {messages.length <= 1 && (

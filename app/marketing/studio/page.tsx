@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import AiLogin from "../../ai-login";
 
 /* ---------- Fryday Studio: คลิป "พิกัดร้าน" 9:16 ----------
    วาดบน canvas 1080x1920 แล้วอัดเป็นไฟล์วิดีโอในเบราว์เซอร์ (MediaRecorder)
@@ -243,6 +244,7 @@ function ClipPanel({ info, clip, names, onApply, onSeg, onFile, say }: {
   const [script, setScript] = useState<ScriptOut | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -268,7 +270,9 @@ function ClipPanel({ info, clip, names, onApply, onSeg, onFile, say }: {
     }).catch(() => null);
     const d = res ? await res.json().catch(() => ({})) : {};
     setBusy(false);
+    if (res?.status === 401) { setLocked(true); setErr(""); return; }
     if (!res?.ok || !d.script) { setErr(d.error ?? "เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง"); return; }
+    setLocked(false);
     setScript(d.script as ScriptOut);
   };
 
@@ -308,6 +312,7 @@ function ClipPanel({ info, clip, names, onApply, onSeg, onFile, say }: {
           <button style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={generate}>{busy ? "กำลังเขียนบท…" : script ? "✨ เขียนบทใหม่" : "✨ สร้างบท"}</button>
           {err && <span role="alert" style={{ fontSize: 13, color: "#A32D2D" }}>❌ {err}</span>}
         </div>
+        {locked && <AiLogin onDone={() => { setLocked(false); void generate(); }} />}
       </section>
 
       {script && (
