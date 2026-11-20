@@ -76,8 +76,11 @@ function prompts(p: Ideas | Script): { system: string; user: string } {
   return {
     system: `${BASE_RULES}${extra}
 ให้เขียนสคริปต์คลิปแนวตั้ง ตอบเป็น JSON object รูปแบบ:
-{"hook":"ประโยคเปิดที่หยุดนิ้วใน 3 วินาที","shots":[{"t":"0-3","visual":"สิ่งที่ต้องเห็นในภาพ/ท่าถ่าย","onscreen":"ข้อความบนจอ","voice":"คำพูดหรือเสียงพากย์ (ว่างได้)"}],"caption":"แคปชันพร้อมโพสต์","hashtags":["#..."],"cta":"ประโยคชวนทำต่อ","props":["ของที่ต้องเตรียม"],"tips":["เคล็ดลับการถ่าย"]}
-shots ให้รวมเวลาไม่เกินความยาวที่ขอ ใช้ 4-8 ช็อต แฮชแท็ก 5-8 อัน`,
+{"hook":"ประโยคเปิดที่หยุดนิ้วใน 3 วินาที","shots":[{"t":"0-3","visual":"สิ่งที่ต้องเห็นในภาพ","how":"วิธีถ่ายด้วยมือถือ: มุม ระยะ แสง การเคลื่อนกล้อง","onscreen":"ข้อความบนจอ","voice":"คำพูดหรือเสียงพากย์ (ว่างได้)","ai":"prompt ภาษาอังกฤษสำหรับสร้างภาพเสริมด้วยเครื่องมือ AI วิดีโอ (ว่างได้)"}],"caption":"แคปชันพร้อมโพสต์","hashtags":["#..."],"cta":"ประโยคชวนทำต่อ","props":["ของที่ต้องเตรียม"],"tips":["เคล็ดลับการถ่าย"]}
+shots ให้รวมเวลาไม่เกินความยาวที่ขอ ใช้ 4-8 ช็อต แฮชแท็ก 5-8 อัน
+t ต้องเป็นรูปแบบ "เริ่ม-จบ" เป็นวินาที ต่อเนื่องกัน เช่น "0-3" "3-6"
+ฟิลด์ ai: ผู้ใช้ถ่ายจริงเป็นหลัก ให้ใส่ prompt เฉพาะช็อตเสริมที่ถ่ายยาก เช่น ภาพเปลี่ยนฉาก พื้นหลัง หรือภาพประกอบบรรยากาศ ส่วนช็อตที่เป็นอาหารหรือหน้าร้านของจริงให้เว้น "" เพื่อให้ถ่ายจริง เพราะภาพอาหารจาก AI อาจไม่ตรงกับของที่ลูกค้าได้รับ
+prompt ใน ai ต้องไม่มีตัวอักษร โลโก้ ป้ายราคา หรือใบหน้าคนที่เห็นชัด เขียนสั้น ระบุสิ่งในภาพ การเคลื่อนกล้อง แสง และบอกว่าแนวตั้ง 9:16`,
     user: [
       `ข้อมูลร้าน:\n${p.brand || "(ไม่ได้ระบุ)"}`,
       `ชื่อคอนเทนต์: ${p.title}`,
@@ -108,7 +111,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: MODEL, max_tokens: 3000, system, messages: [{ role: "user", content: user }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: p.mode === "script" ? 4000 : 3000, system, messages: [{ role: "user", content: user }] }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
     const o = (json ?? {}) as Record<string, unknown>;
     const arr = (v: unknown, n: number) => (Array.isArray(v) ? v.slice(0, n).map((x) => s(x, 200)).filter(Boolean) : []);
     const shots = (Array.isArray(o.shots) ? o.shots : []).slice(0, 12).map((x: Record<string, unknown>) => ({
-      t: s(x.t, 12), visual: s(x.visual, 300), onscreen: s(x.onscreen, 120), voice: s(x.voice, 300),
+      t: s(x.t, 12), visual: s(x.visual, 300), how: s(x.how, 300), onscreen: s(x.onscreen, 120), voice: s(x.voice, 300), ai: s(x.ai, 500),
     }));
     return NextResponse.json({ script: { hook: s(o.hook, 200), shots, caption: s(o.caption, 1500), hashtags: arr(o.hashtags, 10), cta: s(o.cta, 200), props: arr(o.props, 10), tips: arr(o.tips, 8) } });
   } catch (err) {

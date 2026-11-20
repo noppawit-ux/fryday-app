@@ -10,8 +10,10 @@ const W = 1080, H = 1920, FPS = 30;
 const RED = "#C0200A", MUTED = "#73726c", LINE = "#e5e3db", YELLOW = "#FFD83D";
 const FONT = `'Prompt','Noto Sans Thai',sans-serif`;
 
-type Kind = "hook" | "map" | "drive" | "landmark" | "arrive" | "inside" | "logo" | "search";
-interface Seg { id: string; kind: Kind; label: string; dur: number; caption: string; media: boolean; hint: string }
+type Kind = "hook" | "map" | "drive" | "landmark" | "arrive" | "inside" | "logo" | "search" | "clip";
+interface Seg { id: string; kind: Kind; label: string; dur: number; caption: string; media: boolean; hint: string; how?: string; ai?: string; voice?: string }
+interface Shot { t: string; visual: string; how: string; onscreen: string; voice: string; ai: string }
+interface ScriptOut { hook: string; shots: Shot[]; caption: string; hashtags: string[]; cta: string; props: string[]; tips: string[] }
 interface Info { name: string; area: string; province: string; address: string; hours: string; handle: string }
 interface Media { type: "video" | "image"; el: HTMLVideoElement | HTMLImageElement; name: string }
 
@@ -194,6 +196,12 @@ function drawFrame(ctx: CanvasRenderingContext2D, segs: Seg[], info: Info, media
     text(ctx, info.area, W / 2, 330 + 175, { size: 44, color: "#fff", weight: 600, alpha: eo((p - 0.15) * 4) });
   } else if (seg.kind === "inside") {
     drawInfo(ctx, info, eo(p * 5));
+  } else if (seg.kind === "clip") {
+    const first = idx === 0;
+    const bs = ctx.createLinearGradient(0, H - 760, 0, H);
+    bs.addColorStop(0, "rgba(0,0,0,0)"); bs.addColorStop(1, "rgba(0,0,0,.6)");
+    ctx.fillStyle = bs; ctx.fillRect(0, H - 760, W, 760);
+    text(ctx, seg.caption, W / 2, first ? 300 : 1330, { size: first ? 96 : 72, color: first ? YELLOW : "#fff", stroke: "#2a1a00", weight: 800, scale: 0.85 + 0.15 * back(p * 4), alpha: eo(p * 6), maxW: 900, lh: 1.15 });
   } else {
     text(ctx, seg.caption, W / 2, 300, { size: 70, scale: 0.85 + 0.15 * back(p * 4), alpha: eo(p * 6), maxW: 880 });
   }
@@ -208,6 +216,154 @@ const btnPrimary: CSSProperties = { ...btn, background: RED, color: "#fff", bord
 const lab: CSSProperties = { display: "block", fontSize: 12, color: MUTED, margin: "0 0 4px" };
 
 const STORE = "fryday-studio-v1";
+const CLIP_STORE = "fryday-studio-clip-v1";
+const LOGO_SEG: Seg = { id: "clip-logo", kind: "logo", label: "โลโก้ปิดท้าย", dur: 2, caption: "", media: false, hint: "" };
+const CLIP_FORMATS = ["เมนู/ASMR", "เบื้องหลังครัว", "บอร์ดเกมในร้าน", "โปรโมชัน", "รีวิวลูกค้า", "ตามเทรนด์"];
+const CLIP_CHANNELS = ["TikTok", "Instagram", "Facebook", "YouTube Shorts"];
+const DEFAULT_BRAND = "ร้านไก่ทอด นั่งห้องแอร์ มีบอร์ดเกมให้เล่นในร้าน";
+
+function parseDur(t: string, fallback = 3) {
+  const m = t.match(/(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)/);
+  if (m) { const d = parseFloat(m[2]) - parseFloat(m[1]); if (d > 0) return clamp(Math.round(d * 2) / 2, 1, 8); }
+  return fallback;
+}
+
+async function copyText(textToCopy: string, ok: string, say: (m: string) => void) {
+  try { await navigator.clipboard.writeText(textToCopy); say(ok); }
+  catch { say("คัดลอกไม่ได้ ลองเลือกข้อความแล้วคัดลอกเอง"); }
+}
+
+/* ---------- แผงโหมด "คลิปเมนู": สร้างบท → ช็อตลิสต์ → ส่งเข้าไทม์ไลน์ ---------- */
+function ClipPanel({ info, clip, names, onApply, onSeg, onFile, say }: {
+  info: Info; clip: Seg[]; names: Record<string, string>;
+  onApply: (segs: Seg[]) => void; onSeg: (id: string, patch: Partial<Seg>) => void;
+  onFile: (id: string, f: File | undefined) => void; say: (m: string) => void;
+}) {
+  const [form, setForm] = useState({ title: "", format: CLIP_FORMATS[0], duration: 30, channel: CLIP_CHANNELS[0], brand: DEFAULT_BRAND, notes: "" });
+  const [script, setScript] = useState<ScriptOut | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem(CLIP_STORE);
+        if (raw) { const d = JSON.parse(raw) as { form?: typeof form; script?: ScriptOut | null }; if (d.form) setForm((f) => ({ ...f, ...d.form })); if (d.script) setScript(d.script); }
+      } catch { /* ใช้ค่าเริ่มต้น */ }
+    });
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(CLIP_STORE, JSON.stringify({ form, script })); } catch { /* ไม่เป็นไร */ }
+  }, [form, script]);
+
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  const generate = async () => {
+    if (!form.title.trim()) { setErr("ใส่ชื่อเมนูหรือหัวข้อคลิปก่อน"); return; }
+    setBusy(true); setErr("");
+    const brand = [`ชื่อร้าน: ${info.name || "Fryday"}`, info.area && `พื้นที่: ${info.area}`, info.address && `ที่อยู่: ${info.address}`, info.hours && `เวลาเปิด-ปิด: ${info.hours}`, form.brand].filter(Boolean).join("\n");
+    const res = await fetch("/api/marketing/ai", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "script", brand, title: form.title, format: form.format, duration: form.duration, channel: form.channel, notes: form.notes }),
+    }).catch(() => null);
+    const d = res ? await res.json().catch(() => ({})) : {};
+    setBusy(false);
+    if (!res?.ok || !d.script) { setErr(d.error ?? "เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง"); return; }
+    setScript(d.script as ScriptOut);
+  };
+
+  const apply = () => {
+    if (!script) return;
+    onApply(script.shots.slice(0, 12).map((x, i) => ({
+      id: `clip${i + 1}`, kind: "clip" as const, label: `${i + 1} · ${x.t ? `${x.t} วิ` : "ช็อต"}`,
+      dur: parseDur(x.t), caption: x.onscreen, media: true,
+      hint: [x.visual, x.how].filter(Boolean).join(" · "), how: x.how, ai: x.ai, voice: x.voice,
+    })));
+  };
+
+  const voiceAll = script?.shots.map((x) => x.voice).filter(Boolean).join("\n") ?? "";
+  const aiAll = script?.shots.map((x, i) => (x.ai ? `ช็อต ${i + 1}: ${x.ai}` : "")).filter(Boolean).join("\n\n") ?? "";
+  const capAll = script ? `${script.caption}\n\n${script.hashtags.join(" ")}` : "";
+
+  return (
+    <>
+      <section style={card}>
+        <h2 style={{ margin: "0 0 4px", fontSize: 16 }}>1 · โจทย์คลิป</h2>
+        <p style={{ margin: "0 0 12px", fontSize: 12.5, color: MUTED }}>ถ่ายจริงด้วยมือถือเป็นหลัก ให้ AI ช่วยคิดบท ช็อตลิสต์ ข้อความบนจอ และคำพากย์</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
+          <label style={{ gridColumn: "1/-1" }}><span style={lab}>เมนู / หัวข้อคลิป *</span>
+            <input style={input} placeholder="เช่น ไก่ทอดกรอบ ซอสสัปปะรดเทอริยากิ" value={form.title} onChange={(e) => set("title", e.target.value)} /></label>
+          <label><span style={lab}>รูปแบบ</span>
+            <select style={input} value={form.format} onChange={(e) => set("format", e.target.value)}>{CLIP_FORMATS.map((f) => <option key={f}>{f}</option>)}</select></label>
+          <label><span style={lab}>ความยาว</span>
+            <select style={input} value={form.duration} onChange={(e) => set("duration", Number(e.target.value))}>{[15, 30, 45, 60].map((d) => <option key={d} value={d}>{d} วินาที</option>)}</select></label>
+          <label><span style={lab}>ช่องทาง</span>
+            <select style={input} value={form.channel} onChange={(e) => set("channel", e.target.value)}>{CLIP_CHANNELS.map((f) => <option key={f}>{f}</option>)}</select></label>
+          <label style={{ gridColumn: "1/-1" }}><span style={lab}>จุดเด่นของร้าน (แก้ได้)</span>
+            <input style={input} value={form.brand} onChange={(e) => set("brand", e.target.value)} /></label>
+          <label style={{ gridColumn: "1/-1" }}><span style={lab}>ข้อมูลจริงของคลิปนี้ เช่น ราคา โปร ส่วนผสม (ใส่เฉพาะที่เป็นจริง AI จะไม่แต่งเพิ่ม)</span>
+            <textarea style={{ ...input, minHeight: 64, resize: "vertical" }} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></label>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+          <button style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={generate}>{busy ? "กำลังเขียนบท…" : script ? "✨ เขียนบทใหม่" : "✨ สร้างบท"}</button>
+          {err && <span role="alert" style={{ fontSize: 13, color: "#A32D2D" }}>❌ {err}</span>}
+        </div>
+      </section>
+
+      {script && (
+        <section style={card}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 16 }}>2 · บทและช็อตลิสต์</h2>
+          <p style={{ margin: "0 0 10px", fontSize: 14 }}><b>ฮุก:</b> {script.hook}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {script.shots.map((x, i) => (
+              <div key={i} style={{ border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, fontSize: 13, lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 600 }}>ช็อต {i + 1} · {x.t} วิ {x.onscreen && <span style={{ color: RED }}>· “{x.onscreen}”</span>}</div>
+                {x.visual && <div>🎥 {x.visual}</div>}
+                {x.how && <div style={{ color: MUTED }}>📱 วิธีถ่าย: {x.how}</div>}
+                {x.voice && <div>🎙 {x.voice}</div>}
+                {x.ai && (
+                  <div style={{ marginTop: 4, padding: 8, background: "#f7f6f1", borderRadius: 8, fontSize: 12, wordBreak: "break-word" }}>
+                    <span style={{ color: MUTED }}>prompt ภาพเสริม (AI วิดีโอ): </span>{x.ai}{" "}
+                    <button style={{ ...btn, fontSize: 12, padding: "3px 8px" }} onClick={() => copyText(x.ai, "คัดลอก prompt แล้ว", say)}>คัดลอก</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+            <button style={btnPrimary} onClick={apply}>⬇ ใช้เป็นไทม์ไลน์ในคลิป</button>
+            <button style={btn} onClick={() => copyText(voiceAll, "คัดลอกบทพากย์แล้ว", say)} disabled={!voiceAll}>คัดลอกบทพากย์</button>
+            <button style={btn} onClick={() => copyText(aiAll, "คัดลอก prompt ทั้งหมดแล้ว", say)} disabled={!aiAll}>คัดลอก prompt ทั้งหมด</button>
+            <button style={btn} onClick={() => copyText(capAll, "คัดลอกแคปชันแล้ว", say)}>คัดลอกแคปชัน+แฮชแท็ก</button>
+          </div>
+          {script.props.length > 0 && <p style={{ margin: "12px 0 0", fontSize: 13 }}><b>เตรียมของ:</b> {script.props.join(" · ")}</p>}
+          {script.tips.length > 0 && <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 13, color: MUTED }}>{script.tips.map((t, i) => <li key={i}>{t}</li>)}</ul>}
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: "#8a5a00" }}>ภาพจาก AI ใช้เป็นภาพเสริมหรือช็อตเปลี่ยนฉากเท่านั้น จานอาหารและหน้าร้านควรถ่ายของจริง เพราะภาพ AI อาจไม่ตรงกับของที่ลูกค้าจะได้รับ อัดเสียงพากย์จากบทแล้วใส่ในช่อง “เสียง/เพลง” ด้านบนได้</p>
+        </section>
+      )}
+
+      {clip.length > 0 && (
+        <section style={card}>
+          <h2 style={{ margin: "0 0 12px", fontSize: 16 }}>3 · ช็อตในคลิป</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {clip.map((s) => (
+              <div key={s.id} style={{ border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, display: "grid", gridTemplateColumns: "1fr 76px", gap: 8 }}>
+                <div style={{ gridColumn: "1/-1", fontSize: 13, fontWeight: 600 }}>{s.label} <span style={{ color: MUTED, fontWeight: 400 }}>· {s.hint}</span></div>
+                <input style={input} aria-label={`ข้อความบนจอ ${s.label}`} placeholder="ข้อความบนจอ" value={s.caption} onChange={(e) => onSeg(s.id, { caption: e.target.value })} />
+                <label style={{ fontSize: 12, color: MUTED }}>วินาที
+                  <input style={{ ...input, padding: "6px 8px" }} type="number" min={1} max={8} step={0.5} value={s.dur} onChange={(e) => onSeg(s.id, { dur: clamp(parseFloat(e.target.value) || 2, 1, 8) })} />
+                </label>
+                <label style={{ gridColumn: "1/-1", fontSize: 13 }}>
+                  <input type="file" accept="video/*,image/*" onChange={(e) => onFile(s.id, e.target.files?.[0])} /> {names[s.id] ? `✅ ${names[s.id]}` : "⬜ ยังไม่ได้ใส่"}
+                </label>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
 
 export default function StudioPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -227,11 +383,14 @@ export default function StudioPage() {
   const [exporting, setExporting] = useState(false);
   const [msg, setMsg] = useState("");
   const [fmt, setFmt] = useState<"mp4" | "webm" | "">("");
+  const [mode, setMode] = useState<"pikat" | "clip">("pikat");
+  const [clip, setClip] = useState<Seg[]>([]);
 
-  const total = segs.reduce((a, s) => a + s.dur, 0);
-  const missing = segs.filter((s) => s.media && !names[s.id]).length;
+  const active = mode === "clip" ? [...clip, LOGO_SEG] : segs;
+  const total = active.reduce((a, s) => a + s.dur, 0);
+  const missing = active.filter((s) => s.media && !names[s.id]).length;
 
-  useEffect(() => { stateRef.current.segs = segs; stateRef.current.info = info; }, [segs, info]);
+  useEffect(() => { stateRef.current.segs = active; stateRef.current.info = info; });
 
   // โหลดข้อความที่เคยกรอก
   useEffect(() => {
@@ -239,8 +398,9 @@ export default function StudioPage() {
     try {
       const raw = localStorage.getItem(STORE);
       if (raw) {
-        const d = JSON.parse(raw) as { info?: Info; caps?: Record<string, string>; durs?: Record<string, number> };
+        const d = JSON.parse(raw) as { info?: Info; caps?: Record<string, string>; durs?: Record<string, number>; clip?: Seg[] };
         if (d.info) setInfo({ ...DEFAULT_INFO, ...d.info });
+        if (Array.isArray(d.clip)) setClip(d.clip);
         setSegs(DEFAULT_SEGS.map((s) => ({ ...s, caption: d.caps?.[s.id] ?? s.caption, dur: d.durs?.[s.id] ?? s.dur })));
       }
     } catch { /* ใช้ค่าเริ่มต้น */ }
@@ -255,9 +415,10 @@ export default function StudioPage() {
         info,
         caps: Object.fromEntries(segs.map((s) => [s.id, s.caption])),
         durs: Object.fromEntries(segs.map((s) => [s.id, s.dur])),
+        clip,
       }));
     } catch { /* ไม่เป็นไร */ }
-  }, [info, segs]);
+  }, [info, segs, clip]);
 
   // ลูปวาดภาพ
   useEffect(() => {
@@ -382,6 +543,15 @@ export default function StudioPage() {
 
   const seek = (v: number) => { stateRef.current.t = v; setT(v); };
   const setSeg = (id: string, patch: Partial<Seg>) => setSegs((a) => a.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const setClipSeg = (id: string, patch: Partial<Seg>) => setClip((a) => a.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const switchMode = (m: "pikat" | "clip") => { if (m !== mode) { stop(); seek(0); setMsg(""); setMode(m); } };
+  const applyClip = (next: Seg[]) => {
+    stop(); seek(0);
+    for (const k of [...mediaRef.current.keys()]) if (k.startsWith("clip") && k !== "clip-logo") mediaRef.current.delete(k);
+    setNames((n) => Object.fromEntries(Object.entries(n).filter(([k]) => !k.startsWith("clip"))));
+    setClip(next);
+    setMsg("ส่งเข้าไทม์ไลน์แล้ว ใส่ฟุตเทจทีละช็อตด้านล่าง");
+  };
   const setI = (k: keyof Info) => (e: React.ChangeEvent<HTMLInputElement>) => setInfo((i) => ({ ...i, [k]: e.target.value }));
 
   return (
@@ -390,11 +560,19 @@ export default function StudioPage() {
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&display=swap" />
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <a href="/marketing" style={{ fontSize: 13, color: MUTED, textDecoration: "none" }}>← Marketing</a>
-        <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>🎬 Studio · คลิป “พิกัดร้าน”</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>🎬 Studio</h1>
         <a href="/marketing/planner" style={{ fontSize: 13, color: MUTED, textDecoration: "none", marginLeft: "auto" }}>🗓 วางแผนคอนเทนต์ →</a>
       </div>
+      <div role="tablist" style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        {([["pikat", "📍 คลิปพิกัดร้าน"], ["clip", "🍗 คลิปเมนู · สร้างบท"]] as const).map(([k, l]) => (
+          <button key={k} role="tab" aria-selected={mode === k} onClick={() => switchMode(k)}
+            style={{ ...btn, borderRadius: 99, padding: "8px 18px", ...(mode === k ? { background: RED, color: "#fff", borderColor: RED, fontWeight: 600 } : {}) }}>{l}</button>
+        ))}
+      </div>
       <p style={{ margin: "0 0 18px", fontSize: 14, color: MUTED }}>
-        กรอกข้อมูลร้าน ใส่ฟุตเทจทีละช็อต ดูตัวอย่าง แล้วกดบันทึกเป็นไฟล์ 9:16 ใช้เวลาเท่าความยาวคลิป ฟุตเทจอยู่ในเครื่องนี้เท่านั้น ไม่ถูกอัปโหลด
+        {mode === "pikat"
+          ? "กรอกข้อมูลร้าน ใส่ฟุตเทจทีละช็อต ดูตัวอย่าง แล้วกดบันทึกเป็นไฟล์ 9:16 ใช้เวลาเท่าความยาวคลิป ฟุตเทจอยู่ในเครื่องนี้เท่านั้น ไม่ถูกอัปโหลด"
+          : "ให้ AI เขียนบทและช็อตลิสต์ ถ่ายตามบท ใส่ฟุตเทจ แล้วบันทึกเป็นคลิป 9:16 ฟุตเทจอยู่ในเครื่องนี้เท่านั้น ไม่ถูกอัปโหลด"}
       </p>
 
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
@@ -407,7 +585,7 @@ export default function StudioPage() {
             {!playing
               ? <button style={btn} onClick={() => begin(false)}>▶ เล่นตัวอย่าง</button>
               : <button style={btn} onClick={stop}>■ หยุด</button>}
-            <button style={{ ...btnPrimary, opacity: exporting || playing ? 0.6 : 1 }} disabled={exporting || playing} onClick={() => begin(true)}>
+            <button style={{ ...btnPrimary, opacity: exporting || playing || (mode === "clip" && clip.length === 0) ? 0.6 : 1 }} disabled={exporting || playing || (mode === "clip" && clip.length === 0)} onClick={() => begin(true)}>
               {exporting ? "กำลังอัด… อย่าปิดหน้านี้" : "⬇ บันทึกคลิป"}
             </button>
           </div>
@@ -430,12 +608,16 @@ export default function StudioPage() {
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12, fontSize: 13 }}>
               <label>โลโก้ (ไม่บังคับ) <input type="file" accept="image/*" onChange={(e) => addLogo(e.target.files?.[0])} /> {logoName}</label>
-              <label>เพลง (ไม่บังคับ) <input type="file" accept="audio/*" onChange={(e) => addAudio(e.target.files?.[0])} /> {audioName}</label>
+              <label>เสียง/เพลง (ไม่บังคับ) <input type="file" accept="audio/*" onChange={(e) => addAudio(e.target.files?.[0])} /> {audioName}</label>
             </div>
             {audioName && <p style={{ margin: "8px 0 0", fontSize: 12, color: MUTED }}>ใช้เฉพาะเพลงที่มีสิทธิ์ใช้เชิงพาณิชย์ เพลงดังที่ไม่ได้ซื้อสิทธิ์อาจถูกปิดเสียงหรือเคลมบนแพลตฟอร์ม</p>}
           </section>
 
-          <section style={card}>
+          <div style={{ display: mode === "clip" ? "flex" : "none", flexDirection: "column", gap: 16 }}>
+            <ClipPanel info={info} clip={clip} names={names} onApply={applyClip} onSeg={setClipSeg} onFile={addMedia} say={setMsg} />
+          </div>
+
+          <section style={{ ...card, display: mode === "pikat" ? "block" : "none" }}>
             <h2 style={{ margin: "0 0 12px", fontSize: 16 }}>ช็อตในคลิป</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {segs.map((s) => (
