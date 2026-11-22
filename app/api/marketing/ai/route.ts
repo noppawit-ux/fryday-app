@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aiGuard } from "@/lib/ai-guard";
+import { loadAll } from "@/lib/content-stats";
+import { buildOwnResults } from "@/lib/own-results";
 
 export const maxDuration = 60;
 
@@ -56,7 +58,7 @@ function parse(body: unknown): Ideas | Script | null {
   return null;
 }
 
-function prompts(p: Ideas | Script): { system: string; user: string } {
+function prompts(p: Ideas | Script, own = ""): { system: string; user: string } {
   if (p.mode === "ideas") {
     return {
       system: `${BASE_RULES}
@@ -92,8 +94,24 @@ prompt ใน ai ต้องไม่มีตัวอักษร โลโ�
       `ความยาว: ${p.duration} วินาที`,
       `ช่องทาง: ${p.channel || "ทุกช่องทาง"}`,
       p.notes ? `ข้อมูล/ข้อกำหนดเพิ่มเติม:\n${p.notes}` : "",
+      own ? `ผลคลิปเก่าของร้านนี้ (ข้อมูลจริงจากระบบ ใช้เป็นแนวทางเลือกฮุกและช็อต อย่าอ้างว่าเป็นเหตุผลที่ทำให้ยอดขายเพิ่ม และห้ามแต่งตัวเลขอื่น):\n${own}` : "",
     ].filter(Boolean).join("\n\n"),
   };
+}
+
+/* ผลคลิปเก่าของร้านเอง (ดึงฝั่งเซิร์ฟเวอร์ ไม่รับจากเบราว์เซอร์) ให้ AI ใช้เป็นแนวทางเขียนบท
+   ถ้าดึงไม่ได้หรือยังไม่มีผลที่บันทึกไว้ จะข้ามไปเงียบๆ ไม่ให้การสร้างบทล้ม */
+async function ownResults() {
+  try {
+    const { clips, survey } = await Promise.race([
+      loadAll(),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000)),
+    ]);
+    return buildOwnResults(clips, survey);
+  } catch (e) {
+    console.error("[ownResults]", e instanceof Error ? e.message : e);
+    return null;
+  }
 }
 
 function extractJson(text: string): unknown {
@@ -113,7 +131,8 @@ export async function POST(req: NextRequest) {
   if (!p) return NextResponse.json({ error: "ข้อมูลไม่ครบ" }, { status: 400 });
 
   try {
-    const { system, user } = prompts(p);
+    const own = p.mode === "script" ? await ownResults() : null;
+    const { system, user } = prompts(p, own?.text ?? "");
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
@@ -143,7 +162,7 @@ export async function POST(req: NextRequest) {
     const shots = (Array.isArray(o.shots) ? o.shots : []).slice(0, 12).map((x: Record<string, unknown>) => ({
       t: s(x.t, 12), visual: s(x.visual, 300), how: s(x.how, 300), onscreen: s(x.onscreen, 120), voice: s(x.voice, 300), ai: s(x.ai, 500),
     }));
-    return NextResponse.json({ script: { hook: s(o.hook, 200), shots, caption: s(o.caption, 1500), hashtags: arr(o.hashtags, 10), cta: s(o.cta, 200), props: arr(o.props, 10), tips: arr(o.tips, 8) } });
+    return NextResponse.json({ script: { hook: s(o.hook, 200), shots, caption: s(o.caption, 1500), hashtags: arr(o.hashtags, 10), cta: s(o.cta, 200), props: arr(o.props, 10), tips: arr(o.tips, 8) }, basis: own?.basis ?? null });
   } catch (err) {
     console.error("[POST /api/marketing/ai]", err);
     return NextResponse.json({ error: "AI ตอบกลับในรูปแบบที่อ่านไม่ได้ ลองกดสร้างใหม่" }, { status: 502 });
