@@ -242,6 +242,7 @@ function ClipPanel({ info, clip, names, onApply, onSeg, onFile, say }: {
 }) {
   const [form, setForm] = useState({ title: "", format: CLIP_FORMATS[0], duration: 30, channel: CLIP_CHANNELS[0], brand: DEFAULT_BRAND, notes: "" });
   const [script, setScript] = useState<ScriptOut | null>(null);
+  const [basis, setBasis] = useState<{ clips: number; bestPillar: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [locked, setLocked] = useState(false);
@@ -274,6 +275,7 @@ function ClipPanel({ info, clip, names, onApply, onSeg, onFile, say }: {
     if (!res?.ok || !d.script) { setErr(d.error ?? "เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง"); return; }
     setLocked(false);
     setScript(d.script as ScriptOut);
+    setBasis(d.basis ?? null);
   };
 
   const apply = () => {
@@ -318,6 +320,7 @@ function ClipPanel({ info, clip, names, onApply, onSeg, onFile, say }: {
       {script && (
         <section style={card}>
           <h2 style={{ margin: "0 0 10px", fontSize: 16 }}>2 · บทและช็อตลิสต์</h2>
+          <p style={{ margin: "0 0 6px", fontSize: 12, color: MUTED }}>{basis ? `อ้างอิงผลคลิปเก่าของร้าน ${basis.clips} คลิป${basis.bestPillar ? ` (เสาหลักที่ views เฉลี่ยสูงสุด: ${basis.bestPillar})` : ""} · ตัวอย่างยังน้อย ใช้เป็นแนวทางเท่านั้น` : "ยังไม่มีผลคลิปเก่าให้อ้างอิง บทนี้เขียนจากโจทย์ที่กรอกอย่างเดียว"}</p>
           <p style={{ margin: "0 0 10px", fontSize: 14 }}><b>ฮุก:</b> {script.hook}</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {script.shots.map((x, i) => (
