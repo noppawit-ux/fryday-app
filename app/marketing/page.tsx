@@ -158,9 +158,11 @@ export default function MarketingPage() {
     try {
       const params = new URLSearchParams();
       if (statusFilter !== "ทั้งหมด") params.set("status", statusFilter);
-      const res = await fetch(`/api/marketing?${params}`);
-      if (!res.ok) throw new Error("โหลดข้อมูลไม่สำเร็จ");
-      const data = await res.json();
+      const url = `/api/marketing?${params}`;
+      let res = await fetch(url);
+      if (res.status >= 500) { await new Promise((r) => setTimeout(r, 800)); res = await fetch(url); } // Notion บางครั้งสะดุด ลองซ้ำหนึ่งครั้ง
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(["โหลดข้อมูลไม่สำเร็จ", data.detail].filter(Boolean).join(" · "));
       setCampaigns(data.campaigns);
       setSummary(data.summary);
     } catch (e) { setError((e as Error).message); }
@@ -191,8 +193,8 @@ export default function MarketingPage() {
           <p className="bn-sub">ปฏิทิน วิเคราะห์ยอดขายและเทรนด์ คิดไอเดีย เขียนสคริปต์</p>
         </a>
         <a href="/marketing/studio" className="bn-card dark half" style={{ gridColumn: "span 3" }}>
-          <h2 style={{ fontSize: 15 }}>Studio ทำคลิป “พิกัดร้าน”</h2>
-          <p className="bn-sub">ใส่ฟุตเทจ ดูตัวอย่าง แล้วบันทึกเป็นไฟล์ 9:16</p>
+          <h2 style={{ fontSize: 15 }}>Studio ทำคลิป</h2>
+          <p className="bn-sub">พิกัดร้านและคลิปเมนู: สร้างบท ใส่ฟุตเทจ แล้วบันทึกเป็นไฟล์ 9:16</p>
         </a>
         <a href="/marketing/insights" className="bn-card tint half" style={{ gridColumn: "span 3" }}>
           <h2 style={{ fontSize: 15 }}>สถิติเพจ</h2>
