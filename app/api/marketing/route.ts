@@ -87,7 +87,8 @@ export async function GET(req: NextRequest) {
     );
   } catch (err) {
     console.error("[GET /api/marketing]", err);
-    return NextResponse.json({ error: "ดึงข้อมูลไม่สำเร็จ" }, { status: 500 });
+    const detail = err instanceof Error ? err.message.slice(0, 160) : undefined;
+    return NextResponse.json({ error: "ดึงข้อมูลไม่สำเร็จ", detail }, { status: 500 });
   }
 }
 
