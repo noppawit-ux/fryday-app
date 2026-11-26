@@ -3,6 +3,10 @@
     {
       "path": "/api/notify",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/buffer/sync",
+      "schedule": "30 3 * * *"
     }
   ]
 }
